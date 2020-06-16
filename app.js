@@ -1,9 +1,11 @@
 const express = require('express');
 const app = express();
 
-const port = 3000;
+const port = 3001;
 const server = require('http').createServer(app);
 const cors = require('cors');
+
+const path = require('path');
 
 
 // Cors
@@ -18,6 +20,39 @@ server.listen(port, () => {
 
 // Dotenv used to read process.env
 require('dotenv').config();
+
+const multer = require('./config/multer');
+// Static resources
+app.use('/uploads/', express.static(path.join(__dirname, './public/uploads')));
+
+//Import the mongoose module
+const mongoose = require('mongoose');
+
+//Set up default mongoose connection
+if (process.env.NODE_ENV === 'production') {
+    console.log('connecting to mongo')
+    const mongoDB = 'mongodb://127.0.0.1:27017/pavi';
+//const mongoDB = 'mongodb://markandrews:davmark11@ds133922.mlab.com:33922/heroku_lk4qc5jc';
+
+    mongoose.connect(mongoDB, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+    }, function (err) {
+        // console.log("Mongo error"+ err)
+        if (err) throw err;
+    });
+} else {
+
+    // const mongoDB = 'mongodb://localhost:27017/pavi';
+    const mongoDB = 'mongodb+srv://admin123:davmark11@cluster0-fg4ul.mongodb.net/cauterion';
+    mongoose.connect(mongoDB, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+    });
+}
+
+
+
 
 
 // Body-parser

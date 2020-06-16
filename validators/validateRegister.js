@@ -1,10 +1,13 @@
 // Express Validator
 const {body} = require('express-validator');
-const Users = require('../models/users');
+// const Users = require('../models/users');
+// const db = require('../models');
+const Users = require('../mongoose/models/users');
+// const Users = db.users;
 
 const rules = [
-    body('first_name').not().isEmpty().withMessage('First name is required'),
-    body('last_name').not().isEmpty().withMessage('Last name is required'),
+    // body('first_name').not().isEmpty().withMessage('First name is required'),
+    // body('last_name').not().isEmpty().withMessage('Last name is required'),
     body('email').not().isEmpty().withMessage('E-mail is required').isEmail().withMessage('E-mail is invalid'),
     body('password', 'Password is required').not().isEmpty(),
     // body('gender', 'Gender is required').not().isEmpty(),
@@ -21,14 +24,18 @@ const rules = [
     body().custom(async (req) => {
         let email = req.email;
 
+        console.log('validating register')
+        console.log(email)
+
         // Retrieving a user with request email
-        let user = await Users.findOne({where: {email: email}});
+        // let user = await Users.findOne({where: {email: email}});
+        let user = await Users.findOne({email: email});
+        console.log(user)
 
         if (user != null) throw new Error('E-mail exists');
 
         // return true;
     }),
-
 
 ];
 

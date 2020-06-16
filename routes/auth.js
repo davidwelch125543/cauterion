@@ -6,10 +6,14 @@ const validateLogin = require('../validators/validateLogin');
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
 
+
 // Regular auth routes and social auth logout route
 router.post('/register', validateRegister.rules, authController.register);
+router.post('/check-confirmation-code', authController.checkConfirmationCode);
 router.post('/login', validateLogin.rules, authController.login);
 router.get('/logout', authController.logout);
+router.get('/get-profile', authController.getProfile);
+router.put('/update-profile', uploadProfileImg, authController.updateProfile);
 
 // Passport.js Facebook auth routes
 router.get('/facebook', passport.authenticate('facebook', {session: false}));
