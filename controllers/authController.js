@@ -49,6 +49,7 @@ exports.login = async (req, res) => {
 };
 
 exports.logout = (req, res) => {
+    console.log('test')
     req.logout();
     res.status(200).json({msg: 'OK'})
 };
