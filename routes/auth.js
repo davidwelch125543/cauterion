@@ -15,6 +15,9 @@ router.get('/logout', authController.logout);
 router.get('/get-profile', authController.getProfile);
 router.put('/update-profile', uploadProfileImg, authController.updateProfile);
 
+router.post('/forgot-password', authController.forgotPassword);
+router.put('/change-forgotten-password', authController.changeForgottenPassword);
+
 // Passport.js Facebook auth routes
 router.get('/facebook', passport.authenticate('facebook', {session: false}));
 router.get('/facebook/callback', passport.authenticate('facebook', {

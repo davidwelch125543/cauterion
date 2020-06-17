@@ -107,8 +107,7 @@ exports.register = async (req, res) => {
         let originalPass = data.password;
         data.password = bcrypt.hashSync(originalPass, 10);
 
-        // Saving the original password again to request for authenticating the user at once
-        data.password = originalPass;
+
 
         let randomCode = Math.floor(1000 + Math.random() * 9000);
         console.log("CODE: " + randomCode)
@@ -119,6 +118,9 @@ exports.register = async (req, res) => {
 
         let user = new Users(data);
         await user.save();
+
+        // Saving the original password again to request for authenticating the user at once
+        data.password = originalPass;
 
 
         // console.log(data)
@@ -139,10 +141,13 @@ exports.checkConfirmationCode = async (req, res) => {
         // Users.updateOne({email:data},{active:true})
         user.active = true;
         await user.save();
-        this.login(req, res);
+        // if (!data.forgot) {
+            this.login(req, res);
+        // } else return true;
         // res.json('The code has been confirmed successfully');
     } else {
         res.status(500).json('Wrong confirmation code');
+        return false;
     }
 };
 
@@ -196,6 +201,104 @@ exports.updateProfile = async (req, res) => {
             }
         }
     })
+
+
+};
+
+
+exports.forgotPassword = async (req, res) => {
+// Getting validation result from express-validator
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//         return res.status(422).json(errors.array()[0]);
+//     }
+    const user = req.body;
+    console.log('forgot password!!!')
+    let foundUser = await Users.findOne({email: user.email});
+    console.log(user)
+
+
+    if (!foundUser) {
+        res.status(500).json('User is not found');
+    } else {
+
+
+        const email = user.email;
+
+        // let tempToken = jwt.sign({
+        //     email: user.email,
+        //     id: user.id,
+        //
+        //     first_name: user.first_name,
+        //     last_name: user.last_name,
+        //     company_id: user.company_id,
+        //     gender: user.gender,
+        //     field_type: user.field_type,
+        //     user_type: user.user_type
+        // }, 'secretkey', {expiresIn: '1h'});
+
+        // create reusable transporter object using the default SMTP transport
+        let transporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 587,
+            secure: false, // true for 465, false for other ports
+            auth: {
+                user: 'sofiabruno3003', // generated ethereal user
+                pass: 'davmark11' // generated ethereal password
+            }
+        });
+
+        let randomCode = Math.floor(1000 + Math.random() * 9000);
+        console.log("CODE" + randomCode)
+        // console.log(process.env)
+
+        // setup email data with unicode symbols
+        let mailOptions = {
+            from: 'Cauterion', // sender address
+            to: email, // list of receivers
+            subject: 'Password Reset', // Subject line
+            text: 'You recently requested a password reset', // plain text body
+            html: `${randomCode}` // html body
+        };
+
+        // send mail with defined transport object
+        transporter.sendMail(mailOptions, (error, info) => {
+            console.log(error)
+            if (error) {
+                res.status(500).json({msg: error.toString()})
+            } else if (info) {
+
+                console.log('Message sent: %s', info.messageId);
+                // Preview only available when sending through an Ethereal account
+                console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+                res.json(randomCode);
+            }
+
+
+        });
+    }
+};
+
+
+exports.changeForgottenPassword = async (req, res) => {
+    console.log('here!!!!')
+    let data = req.body;
+    let newPassword = data.new_password;
+
+    // if (this.checkConfirmationCode(req, res)) {
+        let foundUser = await Users.findOne({email: data.email});
+
+
+        if (!foundUser) {
+            res.status(500).json('User is not found');
+        } else {
+
+            data.password = bcrypt.hashSync(newPassword, 10);
+
+            await Users.updateOne({password: data.password}, {email: data.email});
+            res.json('OK')
+        }
+    // }
 
 
 };
