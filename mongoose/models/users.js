@@ -53,7 +53,8 @@ let UsersSchema = new mongoose.Schema({
             test_name: {type: String},
             pn: {type: String},
             front_id: {type: String},
-            result: {type: Boolean},
+            image: {type: String},
+            result: {type: String},
             date_val: {type: String},
         }]
     },

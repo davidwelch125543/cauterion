@@ -30,7 +30,7 @@ let storage = multer.diskStorage({
 
 let upload = multer({
     storage: storage,
-    limits: {fileSize: UPLOAD_MAX_FILE_SIZE},
+    // limits: {fileSize: UPLOAD_MAX_FILE_SIZE},
     fileFilter: function (req, file, cb) {
         console.log('file filter!!!!')
         let filetypes = /jpeg|jpg/;

@@ -3,9 +3,10 @@ const router = express.Router();
 const usersController = require('../controllers/usersController');
 
 
-router.post('/add-test', usersController.addTest);
-router.put('/update-test-serial-number', usersController.updateTestSerialNumber);
-router.post('/upload-test-images', uploadImages, usersController.updateTestSerialNumber);
+// router.post('/add-test', usersController.addTest);
+router.get('/check-test-serial-number', usersController.checkTestSerialNumber);
+router.post('/upload-test-images', uploadImages, usersController.updateTestImages);
+// router.put('/update-test-result', uploadImages, usersController.updateTestResult);
 
 
 module.exports = router;
