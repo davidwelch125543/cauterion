@@ -48,6 +48,15 @@ let UsersSchema = new mongoose.Schema({
     code: {
         type: String,
     },
+    tests: {
+        type: [{
+            test_name: {type: String},
+            pn: {type: String},
+            front_id: {type: String},
+            result: {type: Boolean},
+            date_val: {type: String},
+        }]
+    },
     active: {
         type: Boolean,
         default: false

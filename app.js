@@ -66,6 +66,7 @@ app.use(passport.initialize({}));
 
 // Routes
 app.use('/auth', require('./routes/auth'));
+app.use('/users', require('./routes/users'));
 
 
 
