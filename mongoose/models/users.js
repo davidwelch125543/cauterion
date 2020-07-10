@@ -24,6 +24,9 @@ let UsersSchema = new mongoose.Schema({
     avatar: {
         type: String
     },
+    nationalId: {
+      type: String
+    },
     gender: {
         type: String
     },
