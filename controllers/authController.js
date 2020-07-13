@@ -62,13 +62,14 @@ exports.sendConfirmationCode = (req, res) => {
 
 // create reusable transporter object using the default SMTP transport
     let transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 587,
-        secure: false, // true for 465, false for other ports
-        auth: {
-            user: 'sofiabruno3003', // generated ethereal user
-            pass: 'davmark11' // generated ethereal password
-        }
+      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465, // 587
+      secure: true, // true for 465, false for other ports
+      auth: {
+          user: 'sofiabruno3003', // generated ethereal user
+          pass: 'davmark11' // generated ethereal password
+      }
     });
 
 
