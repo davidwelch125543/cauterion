@@ -5,7 +5,6 @@ const validateRegister = require('../validators/validateRegister');
 const validateLogin = require('../validators/validateLogin');
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
-const { S3UploaderMiddleware, S3_FILE_KEY, S3_FOLDERS } = require('../lib/multer_s3');
 
 // Regular auth routes and social auth logout route
 router.post('/register', validateRegister.rules, authController.register);
@@ -13,10 +12,7 @@ router.post('/check-confirmation-code', authController.checkConfirmationCode);
 router.post('/login', validateLogin.rules, authController.login);
 router.get('/logout', authController.logout);
 router.get('/get-profile', authController.getProfile);
-router.put('/update-profile',
-  S3UploaderMiddleware(S3_FOLDERS.PROFILE_IMG, S3_FILE_KEY.PROFILE_IMG),
-  authController.updateProfile);
-
+router.put('/update-profile', authController.updateProfile);
 router.post('/forgot-password', authController.forgotPassword);
 router.put('/change-forgotten-password', authController.changeForgottenPassword);
 
