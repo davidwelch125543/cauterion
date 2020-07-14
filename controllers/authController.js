@@ -1,4 +1,3 @@
-const sequelize = require('sequelize');
 const jwt = require('jsonwebtoken');
 const Users = require('../mongoose/models/users');
 const bcrypt = require('bcryptjs');
@@ -98,7 +97,6 @@ exports.sendConfirmationCode = (req, res) => {
     });
 };
 
-
 exports.register = async (req, res) => {
   try {
     if (!showIfErrors(req, res)) {
@@ -119,7 +117,7 @@ exports.register = async (req, res) => {
       // Saving the original password again to request for authenticating the user at once
       data.password = originalPass;
       await MailSenderManager.confirmationCode(user.email, user.code);
-  } 
+    } 
   } catch (error) {
     res.status(400).send(error);
   } 
@@ -144,60 +142,28 @@ exports.checkConfirmationCode = async (req, res) => {
     }
 };
 
-
-/**
- * Gets profile data of current authenticated user
- * @param req
- * @param res
- * @returns {Promise<void>}
- */
 exports.getProfile = async (req, res) => {
-
-    const data = req.query;
-    const email = data.email;
-
-
-    // Selecting an employee that has an email matching request one
-    let user = await Users.findOne({
-        email: email
-    });
-    res.json(user);
+  const { email } = req.query || {};
+  let user = await Users.findOne({
+      email
+  });
+  res.json(user);
 };
-
 
 exports.updateProfile = async (req, res) => {
-
-    let data = req.body;
-
-    uploadProfileImg(req, res, async (err) => {
-        // Gets file type validation error
-        if (req.fileTypeError) {
-            res.status(423).json(req.fileTypeError);
-        }
-
-        // Getting multer errors if any
-        else if (err) res.status(423).json(err);
-
-        // If file validation passed, heading to the request data validation
-        else {
-            if (!showIfErrors(req, res)) {
-
-
-                // Cloning user object without id and language to build update fields
-                let {id, lang, ...fields} = data;
-
-                console.log(fields)
-
-                delete fields.email; //temporary
-                let result = await Users.updateOne({_id: data._id}, fields);
-                res.json(result)
-            }
-        }
-    })
-
-
+  try {
+    const data = req.body;
+    const avatar = req.file ? req.file.location : null;
+    if (avatar) data.avatar = avatar;
+    const { _id, email, password, ...fields } = data;
+    
+    const result = await Users.updateOne({ _id }, fields);
+    res.status(200).send(result);
+  } catch (error) {
+    console.log('Failed in update profile', error);
+    res.status(400).send(error);
+  }
 };
-
 
 exports.forgotPassword = async (req, res) => {
 // Getting validation result from express-validator
@@ -266,12 +232,9 @@ exports.forgotPassword = async (req, res) => {
                 console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
                 res.json(randomCode);
             }
-
-
         });
     }
 };
-
 
 exports.changeForgottenPassword = async (req, res) => {
     console.log('here!!!!')

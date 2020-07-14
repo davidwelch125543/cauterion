@@ -1,7 +1,6 @@
 // Enable configs
 const dotenv = require('dotenv');
 dotenv.config();
-require('./config/multer');
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
@@ -9,13 +8,12 @@ const cors = require('cors');
 const path = require('path');
 
 // Express server config
-let port = process.env.PORT || 3002;
+let port = process.env.PORT || 3003;
 const app = express();
 
 // Body-parser
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
-
 
 // Cors config
 var corsOptions = {

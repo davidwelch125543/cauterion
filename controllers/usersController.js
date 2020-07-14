@@ -53,6 +53,16 @@ exports.checkTestSerialNumber = async (req, res) => {
     }
 };
 
+
+exports.uploadImage =  function (req, res) {
+  try {
+    const filePath = req.file ? req.file.location : null;
+    res.status(200).send(filePath);
+  } catch (error) {
+    res.status(400).send('Image upload failed', error);
+  }
+}
+
 exports.updateTestImages = async (req, res) => {
     let data = req.body;
 
