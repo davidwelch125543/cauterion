@@ -4,6 +4,7 @@ const Users = require('../mongoose/models/users');
 const bcrypt = require('bcryptjs');
 const showIfErrors = require('../helpers/showIfErrors');
 const nodemailer = require('nodemailer');
+const { MailSenderManager } = require('../lib/ses-lib');
 
 exports.login = async (req, res) => {
 
@@ -94,43 +95,34 @@ exports.sendConfirmationCode = (req, res) => {
             console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
             res.json('The confirmation code has been sent successfully');
         }
-
-
     });
 };
 
 
 exports.register = async (req, res) => {
+  try {
     if (!showIfErrors(req, res)) {
 
-        let data = {...req.body, ...{first_name: '', last_name: '', nationality: '', gender: '', birthday: ''}};
-        // Saving the original password of user and hashing it to save in db
-        let originalPass = data.password;
-        data.password = bcrypt.hashSync(originalPass, 10);
+      let data = {...req.body, ...{first_name: '', last_name: '', nationality: '', gender: '', birthday: ''}};
+      let originalPass = data.password;
+      data.password = bcrypt.hashSync(originalPass, 10);
 
+      let randomCode = Math.floor(1000 + Math.random() * 9000);
+      console.log("CODE: " + randomCode)
+      data.code = randomCode;
+      req.body = data;
+      console.log(data)
 
+      let user = new Users(data);
+      await user.save();
 
-        let randomCode = Math.floor(1000 + Math.random() * 9000);
-        console.log("CODE: " + randomCode)
-        data.code = randomCode;
-        req.body = data;
-        console.log(data)
-        // console.log(process.env)
-
-        let user = new Users(data);
-        await user.save();
-
-        // Saving the original password again to request for authenticating the user at once
-        data.password = originalPass;
-
-
-        // console.log(data)
-
-        this.sendConfirmationCode(req, res);
-    }
-
-
-    //
+      // Saving the original password again to request for authenticating the user at once
+      data.password = originalPass;
+      await MailSenderManager.confirmationCode(user.email, user.code);
+  } 
+  } catch (error) {
+    res.status(400).send(error);
+  } 
 };
 
 exports.checkConfirmationCode = async (req, res) => {
