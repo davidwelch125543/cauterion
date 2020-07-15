@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const showIfErrors = require('../helpers/showIfErrors');
 const nodemailer = require('nodemailer');
 const { MailSenderManager } = require('../lib/ses-lib');
-const { uploadAvatar } = require('../helpers/uploads');
+const { uploadAvatar, uploadNationalId } = require('../helpers/uploads');
 
 exports.login = async (req, res) => {
 
@@ -157,8 +157,12 @@ exports.updateProfile = async (req, res) => {
     const user = await Users.findById(data._id);
     if (!user) throw new Error('Invalid user');
 
-    const avatar = data.avatar && !data.avatar.startsWith('http') ? (await uploadAvatar(data.avatar, user._id)).Location : null;
+    const nationalId = data.nationalId && !data.nationalId.startsWith('http')
+      ? (await uploadNationalId(data.nationalId, user._id)).Location : null;
+    const avatar = data.avatar && !data.avatar.startsWith('http')
+      ? (await uploadAvatar(data.avatar, user._id)).Location : null;
     data.avatar = avatar;
+    data.nationalId = nationalId;
     
     const { _id, email, password, ...fields } = data;
     const result = await Users.updateOne({ _id }, fields);

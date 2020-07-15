@@ -12,8 +12,8 @@ let port = process.env.PORT || 3003;
 const app = express();
 
 // Body-parser
-app.use(bodyParser.json({ limit: '10mb', extended: true}))
-app.use(bodyParser.urlencoded({ limit: '10mb', extended: true}))
+app.use(bodyParser.json({ limit: '20mb', extended: true}))
+app.use(bodyParser.urlencoded({ limit: '20mb', extended: true}))
 
 // Cors config
 var corsOptions = {
