@@ -161,8 +161,8 @@ exports.updateProfile = async (req, res) => {
       ? (await uploadNationalId(data.nationalId, user._id)).Location : null;
     const avatar = data.avatar && !data.avatar.startsWith('http')
       ? (await uploadAvatar(data.avatar, user._id)).Location : null;
-    data.avatar = avatar;
-    data.nationalId = nationalId;
+    if (avatar) data.avatar = avatar;
+    if (nationalId) data.nationalId = nationalId;
     
     const { _id, email, password, ...fields } = data;
     const result = await Users.updateOne({ _id }, fields);
