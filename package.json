@@ -28,6 +28,7 @@
     "passport-facebook-token": "^3.3.0",
     "passport-google-oauth20": "^2.0.0",
     "sequelize": "^5.19.2",
-    "sequelize-cli": "^5.5.1"
+    "sequelize-cli": "^5.5.1",
+    "uuid": "^8.2.0"
   }
 }

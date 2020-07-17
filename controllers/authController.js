@@ -1,53 +1,24 @@
 const jwt = require('jsonwebtoken');
-const Users = require('../mongoose/models/users');
 const bcrypt = require('bcryptjs');
-const showIfErrors = require('../helpers/showIfErrors');
 const nodemailer = require('nodemailer');
 const { MailSenderManager } = require('../lib/ses-lib');
+const { User } = require('../models/user.model');
 const { uploadAvatar, uploadNationalId } = require('../helpers/uploads');
 
 exports.login = async (req, res) => {
-
-    // Checking validation result from express-validator
-    if (!showIfErrors(req, res)) {
-        // Getting request data and setting user fields to return
-        let data = req.body;
-        let email = data.email.trim();
-
-        // let attributes = [`first_name`, `last_name`, 'email', 'profile_img', 'password', 'id', 'status_id'];
-        //
-        // // Active status selecting
-        // let statusWhere = sequelize.where(sequelize.col('`users_status`.`name_en`'), 'active');
-
-        console.log('login')
-        console.log(data)
-
-
-        // Selecting an employee that has an email matching request one
-        let user = await Users.findOne({email: email});
-
-
-        if (!res.headersSent) {
-
-
-            // User is not active
-            if (!user) res.status(500).json({msg: 'You don\'t have such privileges or the account is inactive'});
-
-            else {
-                // Cloning users object without password and saving user full name
-                let {password, ...details} = user.toJSON();
-                // let full_name = user[`first_name`] + ' ' + user[`last_name`];
-
-
-                res.status(200).json({
-                    token: jwt.sign(details, 'secretkey', {expiresIn: '8h'})
-                })
-            }
-
-
-        }
-    }
-};
+  try {
+    // Selecting an employee that has an email matching request one
+  const { email } = req.body;
+  const user = await User.getUserByEmail(email);
+  const { password, ...userDetails } = user;
+  res.status(200).json({
+    token: jwt.sign(userDetails, 'secretkey', {expiresIn: '8h'})
+  });
+  } catch (error) {
+    console.log('Login failed', error);
+    res.status(400).send({ error: error.message });
+  }
+}
 
 exports.logout = (req, res) => {
     console.log('test')
@@ -100,73 +71,63 @@ exports.sendConfirmationCode = (req, res) => {
 
 exports.register = async (req, res) => {
   try {
-    if (!showIfErrors(req, res)) {
+    const data = req.body;
+    data.password = bcrypt.hashSync(data.password, 10);
+    const generatedCode = Math.floor(1000 + Math.random() * 9000);
+    data.code = generatedCode;
+    const user = new User(data);
+    await user.create();
+    res.status(200).send('Registration complete');
 
-      let data = {...req.body, ...{first_name: '', last_name: '', nationality: '', gender: '', birthday: ''}};
-      let originalPass = data.password;
-      data.password = bcrypt.hashSync(originalPass, 10);
-
-      let randomCode = Math.floor(1000 + Math.random() * 9000);
-      console.log("CODE: " + randomCode)
-      data.code = randomCode;
-      req.body = data;
-      console.log(data)
-
-      let user = new Users(data);
-      await user.save();
-
-      // Saving the original password again to request for authenticating the user at once
-      data.password = originalPass;
-      await MailSenderManager.confirmationCode(user.email, user.code);
-    } 
+    // await MailSenderManager.confirmationCode(user.email, user.code);
   } catch (error) {
     res.status(400).send(error);
   } 
 };
 
 exports.checkConfirmationCode = async (req, res) => {
-    let data = req.body;
-    console.log(data)
-    let user = await Users.findOne({email: data.email, code: data.code});
+  try {
+    const data = req.body;
+    let user = await User.getUserByEmail(data.email);
 
-    if (user) {
-        // Users.updateOne({email:data},{active:true})
-        user.active = true;
-        await user.save();
-        // if (!data.forgot) {
-            this.login(req, res);
-        // } else return true;
-        // res.json('The code has been confirmed successfully');
-    } else {
-        res.status(500).json('Wrong confirmation code');
-        return false;
-    }
+    if (!user || user.active || user.code !== data.code) throw new Error('Invalid request');
+    user = new User({ ...user, active: true });
+    await user.update();
+    res.status(200).send('Confiramtion code passed');
+  } catch (error) {
+    console.log('Error in confirmation', error);
+    res.status(409).send({ error: error.message });
+  }
 };
 
 exports.getProfile = async (req, res) => {
-  const { email } = req.query || {};
-  let user = await Users.findOne({
-      email
-  });
-  res.json(user);
+  try {
+    const { email } = req.query || {};
+    const user = await User.getUserByEmail(email);
+    res.status(200).send(user);
+  } catch (error) {
+    console.log('Get-profile failed with ', error);
+    res.status(400).send(error);
+  }
 };
 
 exports.updateProfile = async (req, res) => {
   try {
     const data = req.body;
-    const user = await Users.findById(data._id);
+    let user = (await User.getUserById(data.id)).Items[0];
     if (!user) throw new Error('Invalid user');
 
     const nationalId = data.nationalId && !data.nationalId.startsWith('http')
-      ? (await uploadNationalId(data.nationalId, user._id)).Location : null;
+      ? (await uploadNationalId(data.nationalId, user.id)).Location : null;
     const avatar = data.avatar && !data.avatar.startsWith('http')
-      ? (await uploadAvatar(data.avatar, user._id)).Location : null;
+      ? (await uploadAvatar(data.avatar, user.id)).Location : null;
     if (avatar) data.avatar = avatar;
     if (nationalId) data.nationalId = nationalId;
     
-    const { _id, email, password, ...fields } = data;
-    const result = await Users.updateOne({ _id }, fields);
-    res.status(200).send(result);
+    const { id, email, password, ...fields } = data;
+    const exUser = new User({ ...user, ...fields });
+    exUser.update();
+    res.status(200).send('User updated');
   } catch (error) {
     console.log('Failed in update profile', error);
     res.status(400).send(error);
@@ -181,15 +142,12 @@ exports.forgotPassword = async (req, res) => {
 //     }
     const user = req.body;
     console.log('forgot password!!!')
-    let foundUser = await Users.findOne({email: user.email});
+    let foundUser = await User.getUserByEmail(user.email);
     console.log(user)
-
 
     if (!foundUser) {
         res.status(500).json('User is not found');
     } else {
-
-
         const email = user.email;
 
         // let tempToken = jwt.sign({
@@ -245,24 +203,15 @@ exports.forgotPassword = async (req, res) => {
 };
 
 exports.changeForgottenPassword = async (req, res) => {
-    console.log('here!!!!')
-    let data = req.body;
-    let newPassword = data.new_password;
-
-    // if (this.checkConfirmationCode(req, res)) {
-        let foundUser = await Users.findOne({email: data.email});
-
-
-        if (!foundUser) {
-            res.status(500).json('User is not found');
-        } else {
-
-            data.password = bcrypt.hashSync(newPassword, 10);
-
-            await Users.updateOne({password: data.password}, {email: data.email});
-            res.json('OK')
-        }
-    // }
-
-
+  console.log('here!!!!')
+  let data = req.body;
+  let newPassword = data.new_password;
+  let foundUser = await User.getUserByEmail(data.email);
+  if (!foundUser) {
+    res.status(500).json('User is not found');
+  } else {
+    data.password = bcrypt.hashSync(newPassword, 10);
+    // await Users.updateOne({password: data.password}, {email: data.email});
+    res.json('OK')
+  }
 };

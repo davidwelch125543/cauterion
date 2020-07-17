@@ -1,6 +1,9 @@
-const tableName = `Users-dev`;
-const dynamoDbLib = require('../lib/dynamodb-lib')
+const dynamoDbLib = require('../lib/dynamodb-lib');
+const { getItemByGSIFull } = require('../lib/dynamo-requests');
 const _ = require('lodash');
+const uuid = require('uuid').v4;
+
+const tableName = `users-dev`;
 
 class User {
   constructor(obj) {
@@ -9,16 +12,17 @@ class User {
     this.password = obj.password;
     this.code = obj.code;
     this.active = obj.active;
-    this.firstName = obj.firstName;
-    this.lastName = obj.lastName;
+    this.first_name = obj.first_name;
+    this.last_name = obj.last_name;
     this.gender = obj.gender;
     this.avatar = obj.avatar;
+    this.nationalId = obj.nationalId;
     this.birthday = obj.birthday;
     this.nationality = obj.nationality;
     this.roles = obj.roles || [];
     this.tests = obj.tests || [];
     this.createdAt = obj.createdAt || new Date().getTime();
-    this.updatedAt = obj.updatedAt || new Date().getTime();
+    this.updatedAt = obj.updatedAt;
   }
 
   toModel() {
@@ -28,10 +32,11 @@ class User {
      password: this.password,
      code: this.code,
      active: this.active,
-     firstName: this.firstName,
-     lastName: this.lastName,
+     first_name: this.first_name,
+     last_name: this.last_name,
      gender: this.gender,
      avatar: this.avatar,
+     nationalId: this.nationalId,
      birthday: this.birthday,
      nationality: this.nationality,
      roles: this.roles,
@@ -45,12 +50,24 @@ class User {
 
   async create() {
     const user = this.toModel();
+    user.id = uuid();
+    user.active = false;
     console.log('User create', user);
     const params = {
       TableName: tableName,
       Item: user,
     };
     return dynamoDbLib.call('put', params);
+  }
+
+  static async getUserByEmail(email) {
+    const user = (await getItemByGSIFull({
+      TableName: 'users-dev',
+      IndexName: 'email-index',
+      attribute: 'email',
+      value: email
+    })).Items[0];
+    return user;
   }
 
   static async getUserById(id) {
@@ -72,7 +89,7 @@ class User {
     const params = {
       TableName: tableName,
       Key: {
-        userId: this.id,
+        id: this.id,
       },
       ExpressionAttributeValues: {
       },
@@ -83,7 +100,7 @@ class User {
     
     updateItem.updatedAt = new Date().getTime();
     _.forEach(updateItem, (item, key) => {
-      if (!['id', 'password', 'createdAt'].includes(key)) {
+      if (!['id', 'email', 'password', 'createdAt, code'].includes(key)) {
         const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
         params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
         params.ExpressionAttributeNames['#' + key] = key;
@@ -91,7 +108,7 @@ class User {
       }
     });
     const response = await dynamoDbLib.call('update', params);
-    console.log('User update', response);
+    
     return response;
   }
 

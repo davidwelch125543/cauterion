@@ -1,15 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const validateMiddleware = require('../helpers/showIfErrors');
 const validateRegister = require('../validators/validateRegister');
 const validateLogin = require('../validators/validateLogin');
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
 
 // Regular auth routes and social auth logout route
-router.post('/register', validateRegister.rules, authController.register);
+router.post('/register', validateRegister.rules, validateMiddleware, authController.register);
 router.post('/check-confirmation-code', authController.checkConfirmationCode);
-router.post('/login', validateLogin.rules, authController.login);
+router.post('/login', validateLogin.rules, validateMiddleware, authController.login);
 router.get('/logout', authController.logout);
 router.get('/get-profile', authController.getProfile);
 router.put('/update-profile', authController.updateProfile);
