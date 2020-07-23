@@ -3,16 +3,15 @@ const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const { MailSenderManager } = require('../lib/ses-lib');
 const { User } = require('../models/user.model');
-const { uploadAvatar, uploadNationalId } = require('../helpers/uploads');
+const { uploadImage } = require('../helpers/uploads');
 
 exports.login = async (req, res) => {
   try {
     // Selecting an employee that has an email matching request one
   const { email } = req.body;
   const user = await User.getUserByEmail(email);
-  const { password, ...userDetails } = user;
   res.status(200).json({
-    token: jwt.sign(userDetails, 'secretkey', {expiresIn: '8h'})
+    token: jwt.sign({ id: user.id, email: user.email }, process.env.SECRET_KEY, {expiresIn: '8h'})
   });
   } catch (error) {
     console.log('Login failed', error);
@@ -102,12 +101,13 @@ exports.checkConfirmationCode = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
   try {
-    const { email } = req.query || {};
-    const user = await User.getUserByEmail(email);
+    const userId = req.user.id;
+    const user = (await User.getUserById(userId)).Items[0];
+    delete user.password;
     res.status(200).send(user);
   } catch (error) {
     console.log('Get-profile failed with ', error);
-    res.status(400).send(error);
+    res.status(400).send(error.message);
   }
 };
 
@@ -118,9 +118,9 @@ exports.updateProfile = async (req, res) => {
     if (!user) throw new Error('Invalid user');
 
     const nationalId = data.nationalId && !data.nationalId.startsWith('http')
-      ? (await uploadNationalId(data.nationalId, user.id)).Location : null;
+      ? (await uploadImage(user.id, data.nationalId, 'national')).Location : null;
     const avatar = data.avatar && !data.avatar.startsWith('http')
-      ? (await uploadAvatar(data.avatar, user.id)).Location : null;
+      ? (await uploadImage(user.id, data.avatar, 'avatar')).Location : null;
     if (avatar) data.avatar = avatar;
     if (nationalId) data.nationalId = nationalId;
     

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const validateMiddleware = require('../helpers/showIfErrors');
+const { AuthorizerMiddleware } = require('../middlewares/middleware.authorizer');
 const validateRegister = require('../validators/validateRegister');
 const validateLogin = require('../validators/validateLogin');
 const jwt = require('jsonwebtoken');
@@ -12,8 +13,8 @@ router.post('/register', validateRegister.rules, validateMiddleware, authControl
 router.post('/check-confirmation-code', authController.checkConfirmationCode);
 router.post('/login', validateLogin.rules, validateMiddleware, authController.login);
 router.get('/logout', authController.logout);
-router.get('/get-profile', authController.getProfile);
-router.put('/update-profile', authController.updateProfile);
+router.get('/get-profile', AuthorizerMiddleware, authController.getProfile);
+router.put('/update-profile', AuthorizerMiddleware, authController.updateProfile);
 router.post('/forgot-password', authController.forgotPassword);
 router.put('/change-forgotten-password', authController.changeForgottenPassword);
 

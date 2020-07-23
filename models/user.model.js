@@ -20,7 +20,6 @@ class User {
     this.birthday = obj.birthday;
     this.nationality = obj.nationality;
     this.roles = obj.roles || [];
-    this.tests = obj.tests || [];
     this.createdAt = obj.createdAt || new Date().getTime();
     this.updatedAt = obj.updatedAt;
   }
@@ -40,7 +39,6 @@ class User {
      birthday: this.birthday,
      nationality: this.nationality,
      roles: this.roles,
-     tests: this.tests,
      createdAt: this.createdAt,
      updatedAt: this.updatedAt
     };
@@ -100,7 +98,7 @@ class User {
     
     updateItem.updatedAt = new Date().getTime();
     _.forEach(updateItem, (item, key) => {
-      if (!['id', 'email', 'password', 'createdAt, code'].includes(key)) {
+      if (!['id', 'email', 'password', 'createdAt', 'code'].includes(key)) {
         const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
         params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
         params.ExpressionAttributeNames['#' + key] = key;
@@ -108,7 +106,6 @@ class User {
       }
     });
     const response = await dynamoDbLib.call('update', params);
-    
     return response;
   }
 

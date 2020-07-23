@@ -2,41 +2,6 @@ const Users = require('../mongoose/models/users');
 const jwt = require('jsonwebtoken');
 const moment = require('moment');
 
-exports.addTest = async (data, res) => {
-    // let user = await Users.findOne({email: data.email});
-    //
-    // if (user.tests.find(d => d.pn === data.pn)) {
-    //     res.status(500).json('A test with such P/N or name is taken')
-    // } else {
-    //     // if (!user.tests) user.tests = [];
-    //     data.test.front_id = jwt.sign(data, 'secretkey', {expiresIn: '8h'});
-    //     data.test.date_val = moment().format('YYYY-MM-DD hh:mm:ss');
-    //     console.log(data.test)
-    //     user.tests.push(data.test);
-    //
-    //     user.save();
-    //     res.json('OK');
-    // }
-
-
-    // await Users.bulkWrite(
-    //     data.map((dt) =>
-    //         ({
-    //             updateOne: {
-    //                 filter: {
-    //                     email:data.email
-    //                 },
-    //                 update: {
-    //                     $set: dt
-    //                 },
-    //                 upsert: true
-    //             }
-    //         })
-    //     ));
-
-};
-
-
 exports.checkTestSerialNumber = async (req, res) => {
     let data = req.query;
     let user = await Users.findOne({email: data.email});
