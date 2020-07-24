@@ -17,7 +17,7 @@ class Test {
   constructor(obj) {
     this.id = obj.id;
     this.userId = obj.userId;
-    this.type = obj.test;
+    this.type = obj.type;
     this.serialNumber= obj.serialNumber;
     this.testStepsPassed = obj.testStepsPassed;
     this.testStepsDate = obj.testStepsDate;
