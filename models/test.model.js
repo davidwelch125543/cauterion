@@ -46,6 +46,7 @@ class Test {
 
   async create() {
     this.id = uuid();
+    this.updatedAt = Date.now();
     const test = this.toModel();
     const params = {
       TableName: table,
@@ -67,7 +68,7 @@ class Test {
   static async getTestsByUserId(userId) {
     const tests = (await getItemByGSIFull({
       TableName: table,
-      IndexName: 'userId-createdAt-index',
+      IndexName: 'userId-updatedAt-index',
       attribute: 'userId',
       value: userId,
       ScanIndexForward: true
@@ -90,6 +91,7 @@ class Test {
   }
 
   async update() {
+    this.updatedAt = Date.now();
     const updatedItem = this.toModel();
     const params = {
       TableName: table,
