@@ -45,8 +45,8 @@ class Test {
   }
 
   async create() {
+    this.id = uuid();
     const test = this.toModel();
-    test.id = uuid();
     const params = {
       TableName: table,
       Item: test,
