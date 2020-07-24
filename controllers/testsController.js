@@ -1,6 +1,17 @@
 const { User } = require('../models/user.model');
 const { Test } = require('../models/test.model');
 
+const getUserTests = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const tests = await Test.getTestsByUserId(userId);
+    res.status(200).send(tests);
+  } catch (error) {
+    console.log('GetUserTests failed with error: ', error);
+    res.status(409).send(error.message);
+  }
+};
+
 const scanTest = async (req, res) => {
   try {
     const data = req.body;
@@ -50,5 +61,6 @@ const updateTest = async (req, res) => {
 
 module.exports = {
   scanTest,
-  updateTest
+  updateTest,
+  getUserTests,
 };

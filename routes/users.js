@@ -4,6 +4,7 @@ const { AuthorizerMiddleware } = require('../middlewares/middleware.authorizer')
 const usersController = require('../controllers/usersController');
 const testsController = require('../controllers/testsController');
 
+router.get('/tests', AuthorizerMiddleware, testsController.getUserTests);
 router.post('/tests/scan', AuthorizerMiddleware, testsController.scanTest);
 router.put('/tests/:id', AuthorizerMiddleware, testsController.updateTest);
 router.get('/check-test-serial-number', usersController.checkTestSerialNumber);

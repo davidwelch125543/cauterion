@@ -63,6 +63,17 @@ class Test {
     })).Items[0];
     return test;
   }
+
+  static async getTestsByUserId(userId) {
+    const tests = (await getItemByGSIFull({
+      TableName: table,
+      IndexName: 'userId-createdAt-index',
+      attribute: 'userId',
+      value: userId,
+      ScanIndexForward: true
+    })).Items;
+    return tests;
+  }
   
   static async getTestById(testId) {
     const params = {
