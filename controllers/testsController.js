@@ -32,7 +32,11 @@ const scanTest = async (req, res) => {
     } else if (test && test.userId === user.id) { // Countinue test's steps after qr scan by providing current test state to client
       response = test;
     } else {
-      throw new Error('Test is already used, please contact to support team');
+      // Test support page (200 code with response)
+      response = {
+        message: 'Test code is already used, please contact to support team',
+        supportPage : true
+      };
     }
     res.status(200).send(response);
   } catch (error) {
