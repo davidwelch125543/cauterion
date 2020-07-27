@@ -1,6 +1,7 @@
 const Users = require('../mongoose/models/users');
 const jwt = require('jsonwebtoken');
 const moment = require('moment');
+const { SupportTicket } = require('../models/ticket.model');
 
 exports.checkTestSerialNumber = async (req, res) => {
     let data = req.query;
@@ -68,4 +69,17 @@ exports.updateTestResult = async (req, res) => {
     } else {
         res.status(500).json('Test is not found');
     }
+};
+
+exports.createSupportTicket = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const data = req.body;
+    const supportTicket = new SupportTicket({ userId, ...data });
+    await supportTicket.create();
+    res.status(200).send(supportTicket.toModel());
+  } catch (error) {
+    console.log('Failed in')
+    res.status(409).send(error);
+  }
 };
