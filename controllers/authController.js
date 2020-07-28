@@ -76,9 +76,8 @@ exports.register = async (req, res) => {
     data.code = generatedCode;
     const user = new User(data);
     await user.create();
+    await MailSenderManager.confirmationCode(user.email, user.code);
     res.status(200).send('Registration complete');
-
-    // await MailSenderManager.confirmationCode(user.email, user.code);
   } catch (error) {
     res.status(400).send(error);
   } 
