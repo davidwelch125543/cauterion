@@ -75,8 +75,8 @@ exports.register = async (req, res) => {
     const generatedCode = Math.floor(1000 + Math.random() * 9000);
     data.code = generatedCode;
     const user = new User(data);
-    await user.create();
     await MailSenderManager.confirmationCode(user.email, user.code);
+    await user.create(); 
     res.status(200).send('Registration complete');
   } catch (error) {
     res.status(400).send(error);
@@ -91,7 +91,9 @@ exports.checkConfirmationCode = async (req, res) => {
     if (!user || user.active || user.code !== data.code) throw new Error('Invalid request');
     user = new User({ ...user, active: true });
     await user.update();
-    res.status(200).send('Confiramtion code passed');
+    res.status(200).json({
+    token: jwt.sign({ id: user.id, email: user.email }, process.env.SECRET_KEY, {expiresIn: '8h'})
+    });
   } catch (error) {
     console.log('Error in confirmation', error);
     res.status(409).send({ error: error.message });
