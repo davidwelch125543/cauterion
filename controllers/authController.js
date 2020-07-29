@@ -127,7 +127,7 @@ exports.updateProfile = async (req, res) => {
     
     const { id, email, password, ...fields } = data;
     const exUser = new User({ ...user, ...fields });
-    exUser.update();
+    await exUser.update();
     res.status(200).send('User updated');
   } catch (error) {
     console.log('Failed in update profile', error);
