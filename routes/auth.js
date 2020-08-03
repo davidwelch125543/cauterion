@@ -3,18 +3,17 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const validateMiddleware = require('../helpers/showIfErrors');
 const { AuthorizerMiddleware } = require('../middlewares/middleware.authorizer');
-const validateRegister = require('../validators/validateRegister');
-const validateLogin = require('../validators/validateLogin');
+const { registerValidationChain } = require('../validators/validateRegister');
+const { loginValidationChain } = require('../validators/validateLogin');
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
 
-// Regular auth routes and social auth logout route
-router.post('/register', validateRegister.rules, validateMiddleware, authController.register);
+router.post('/register', registerValidationChain(), validateMiddleware, authController.register);
 router.post('/check-confirmation-code', authController.checkConfirmationCode);
-router.post('/login', validateLogin.rules, validateMiddleware, authController.login);
+router.post('/login', loginValidationChain(), validateMiddleware, authController.login);
 router.get('/logout', authController.logout);
-router.get('/get-profile', AuthorizerMiddleware, authController.getProfile);
-router.put('/update-profile', AuthorizerMiddleware, authController.updateProfile);
+router.get('/get-profile', AuthorizerMiddleware(), authController.getProfile);
+router.put('/update-profile', AuthorizerMiddleware(), authController.updateProfile);
 router.post('/forgot-password', authController.forgotPassword);
 router.put('/change-forgotten-password', authController.changeForgottenPassword);
 
@@ -50,7 +49,6 @@ router.get('/google/callback', passport.authenticate('google', {
     let token = jwt.sign(req.user, 'secretkey', {expiresIn: '8h'});
     res.redirect(`${process.env.FRONT_URL}/?token=${token}`);
 });
-
 
 module.exports = router;
 

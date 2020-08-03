@@ -12,6 +12,7 @@ class User {
     this.password = obj.password;
     this.code = obj.code;
     this.active = obj.active;
+    this.type = obj.type;
     this.first_name = obj.first_name;
     this.last_name = obj.last_name;
     this.gender = obj.gender;
@@ -31,6 +32,7 @@ class User {
      password: this.password,
      code: this.code,
      active: this.active,
+     type: this.type,
      first_name: this.first_name,
      last_name: this.last_name,
      gender: this.gender,
@@ -50,6 +52,7 @@ class User {
     const user = this.toModel();
     user.id = uuid();
     user.active = false;
+    user.type = 'user';
     console.log('User create', user);
     const params = {
       TableName: tableName,
@@ -98,7 +101,7 @@ class User {
     
     updateItem.updatedAt = new Date().getTime();
     _.forEach(updateItem, (item, key) => {
-      if (!['id', 'email', 'password', 'createdAt', 'code'].includes(key)) {
+      if (!['id', 'email', 'password', 'type', 'createdAt', 'code'].includes(key)) {
         const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
         params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
         params.ExpressionAttributeNames['#' + key] = key;
@@ -110,6 +113,8 @@ class User {
   }
 
   static async delete(id) {
+    const user = (await this.getUserById(id)).Items[0];
+    if (user.type === 'admin') throw new Error('Access denied');
     const params = {
       TableName: tableName,
       Key: {
