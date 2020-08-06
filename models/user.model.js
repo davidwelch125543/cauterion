@@ -20,7 +20,6 @@ class User {
     this.nationalId = obj.nationalId;
     this.birthday = obj.birthday;
     this.nationality = obj.nationality;
-    this.roles = obj.roles || [];
     this.createdAt = obj.createdAt || new Date().getTime();
     this.updatedAt = obj.updatedAt;
   }
@@ -40,7 +39,6 @@ class User {
      nationalId: this.nationalId,
      birthday: this.birthday,
      nationality: this.nationality,
-     roles: this.roles,
      createdAt: this.createdAt,
      updatedAt: this.updatedAt
     };
@@ -61,9 +59,21 @@ class User {
     return dynamoDbLib.call('put', params);
   }
 
+  static async getUsersListForAdmin(data) {
+    const usersList = await getItemByGSIFull({
+      TableName: tableName,
+      IndexName: 'type-createdAt-index',
+      attribute: 'type',
+      value: 'user',
+      LastEvaluatedKey: data.LastEvaluatedKey || null,
+      Limit: data.limit || 20
+    });
+    return usersList;
+  }
+
   static async getUserByEmail(email) {
     const user = (await getItemByGSIFull({
-      TableName: 'users-dev',
+      TableName: tableName,
       IndexName: 'email-index',
       attribute: 'email',
       value: email

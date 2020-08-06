@@ -1,6 +1,4 @@
 const to = require('../helpers/getPromiseResult');
-const db = require('../models');
-const Users = db.users;
 const FacebookStrategy = require('passport-facebook').Strategy;
 
 // Strategy config

@@ -1,5 +1,3 @@
-const db = require('../models');
-const Users = db.users;
 const to = require('../helpers/getPromiseResult');
 const GoogleStrategy = require('passport-google-oauth20');
 

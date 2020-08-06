@@ -115,8 +115,7 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const data = req.body;
-    let user = (await User.getUserById(data.id)).Items[0];
-    if (!user) throw new Error('Invalid user');
+    let user = req.user;
 
     const nationalId = data.nationalId && !data.nationalId.startsWith('http')
       ? (await uploadImage(user.id, data.nationalId, 'national')).Location : null;
@@ -125,7 +124,7 @@ exports.updateProfile = async (req, res) => {
     if (avatar) data.avatar = avatar;
     if (nationalId) data.nationalId = nationalId;
     
-    const { id, email, password, ...fields } = data;
+    const { email, password, ...fields } = data;
     const exUser = new User({ ...user, ...fields });
     await exUser.update();
     res.status(200).send('User updated');
