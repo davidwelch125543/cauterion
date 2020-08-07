@@ -15,6 +15,7 @@ class User {
     this.type = obj.type;
     this.first_name = obj.first_name;
     this.last_name = obj.last_name;
+    this.phone = obj.phone;
     this.gender = obj.gender;
     this.avatar = obj.avatar;
     this.nationalId = obj.nationalId;
@@ -34,6 +35,7 @@ class User {
      type: this.type,
      first_name: this.first_name,
      last_name: this.last_name,
+     phone: this.phone,
      gender: this.gender,
      avatar: this.avatar,
      nationalId: this.nationalId,
