@@ -36,6 +36,7 @@ class SupportTicket {
   constructor(obj) {
     this.id = obj.id;
     this.userId = obj.userId;
+    this.userId_status = obj.userId_status;
     this.provider = obj.provider || 'cauterion';
     this.type = obj.type; // package or test
     this.status = obj.status;
@@ -51,6 +52,7 @@ class SupportTicket {
     let model = {
       id: this.id,
       userId: this.userId,
+      userId_status: this.userId_status,
       provider: this.provider,
       type: this.type,
       status: this.status,
@@ -69,6 +71,7 @@ class SupportTicket {
     this.id = uuid();
     this.updatedAt = Date.now();
     this.status = TICKET_STATUS.PENDING;
+    this.userId_status = `${this.userId}#${this.status}`;
     const supportTicketImage = this.image ? (await uploadImage(this.userId, this.image, 'support')).Location : null;
     if (supportTicketImage) {
       this.image = supportTicketImage;
@@ -96,16 +99,31 @@ class SupportTicket {
   }
 
   static async getSupportTickets(data) {
-    const items = (await getItemByGSIFull({
-      TableName: table,
-      IndexName: data.status ? 'status-updatedAt-index' : 'provider-updatedAt-index',
-      attribute: data.status ? 'status': 'provider',
-      value: data.status || 'cauterion',
-      LastEvaluatedKey: data.LastEvaluatedKey || null,
-      ScanIndexForward: data.ScanIndexForward || true, // default => newest
-      Limit: data.limit || 20
-    }));
-    return items;
+    let response = {};
+    if (data.userId) { // For Users 
+      const items = (await getItemByGSIFull({
+        TableName: table,
+        IndexName: data.status ? 'userId_status-updatedAt-index' : 'userId-updatedAt-index',
+        attribute: data.status ? 'userId_status': 'userId',
+        value: data.status ? `${data.userId}#${data.status}` : data.userId,
+        LastEvaluatedKey: data.LastEvaluatedKey || null,
+        ScanIndexForward: data.ScanIndexForward || true, // default => newest
+        Limit: data.limit || 20
+      }));
+      response = items;
+    } else { // For Admin
+      const items = (await getItemByGSIFull({
+        TableName: table,
+        IndexName: data.status ? 'status-updatedAt-index' : 'provider-updatedAt-index',
+        attribute: data.status ? 'status': 'provider',
+        value: data.status || 'cauterion',
+        LastEvaluatedKey: data.LastEvaluatedKey || null,
+        ScanIndexForward: data.ScanIndexForward || true, // default => newest
+        Limit: data.limit || 20
+      }));
+      response = items;
+    }
+    return response;
   }
 
   static async update(supportTicketId, userId, updatedData, userType) {
@@ -120,7 +138,7 @@ class SupportTicket {
       ticket.status = userType === 'admin' ? TICKET_STATUS.REPLIED : TICKET_STATUS.PENDING;
     }
     if (updatedData.status && updatedData.status === TICKET_STATUS.CLOSED) ticket.status = TICKET_STATUS.CLOSED;
-
+    
     const params = {
       TableName: table,
       Key: {
@@ -133,6 +151,7 @@ class SupportTicket {
       ReturnValues: 'ALL_NEW',
     };
     
+    ticket.userId_status = `${ticket.userId}#${ticket.status}`;
     ticket.updatedAt = new Date().getTime();
     _.forEach(ticket, (item, key) => {
       if (!['id', 'userId', 'title', 'text', 'image', 'provider'].includes(key)) {

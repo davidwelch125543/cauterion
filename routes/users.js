@@ -3,10 +3,15 @@ const router = express.Router();
 const { AuthorizerMiddleware } = require('../middlewares/middleware.authorizer');
 const usersController = require('../controllers/usersController');
 const testsController = require('../controllers/testsController');
+const UserAuthorizerMiddleware = AuthorizerMiddleware();
 
-router.get('/tests', AuthorizerMiddleware(), testsController.getUserTests);
-router.post('/tests/scan', AuthorizerMiddleware(), testsController.scanTest);
-router.put('/tests/:id', AuthorizerMiddleware(), testsController.updateTest);
+
+router.get('/tests', UserAuthorizerMiddleware, testsController.getUserTests);
+router.post('/tests/scan', UserAuthorizerMiddleware, testsController.scanTest);
+router.put('/tests/:id', UserAuthorizerMiddleware, testsController.updateTest);
+router.post('/tickets', UserAuthorizerMiddleware, usersController.getUserTickets);
+router.get('/tickets/:id', UserAuthorizerMiddleware, usersController.getTicketById);
+router.put('/tickets/:id', UserAuthorizerMiddleware, usersController.updateOwnTicket);
 router.post('/support-ticket', AuthorizerMiddleware(), usersController.createSupportTicket);
 
 module.exports = router;
