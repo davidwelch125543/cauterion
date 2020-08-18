@@ -106,6 +106,7 @@ class SupportTicket {
         IndexName: data.status ? 'userId_status-updatedAt-index' : 'userId-updatedAt-index',
         attribute: data.status ? 'userId_status': 'userId',
         value: data.status ? `${data.userId}#${data.status}` : data.userId,
+        rangeValue: data.range || null,
         LastEvaluatedKey: data.LastEvaluatedKey || null,
         ScanIndexForward: data.ScanIndexForward || true, // default => newest
         Limit: data.limit || 20
