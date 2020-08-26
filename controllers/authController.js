@@ -19,6 +19,36 @@ exports.login = async (req, res) => {
   }
 }
 
+exports.register = async (req, res) => {
+  try {
+    const data = req.body;
+    const generatedCode = Math.floor(1000 + Math.random() * 9000);
+    const user = await User.getUserByEmail(data.email);
+    let response = null;
+
+    if (user && !user.active) {
+      const passwordMatch = await bcrypt.compare(data.password, user.password);
+      if (!passwordMatch) throw new Error('User with provided email exists');
+      const updUser = new User({ ...user, code: generatedCode });
+      await MailSenderManager.confirmationCode(user.email, generatedCode);
+      await updUser.update();
+      response = 'Confirm your email address for activation.';
+    } else if(!user) {
+      data.password = bcrypt.hashSync(data.password, 10);
+      data.code = generatedCode;
+      const user = new User(data);
+      await MailSenderManager.confirmationCode(user.email, user.code);
+      await user.create();
+      response = 'Registration complete. Confirm your email address for activation.';
+    } else {
+      throw new Error('User with provided email exists');
+    }
+    res.status(200).send(response);
+  } catch (error) {
+    res.status(400).send(error.message || error);
+  } 
+};
+
 exports.logout = (req, res) => {
     console.log('test')
     req.logout();
@@ -66,21 +96,6 @@ exports.sendConfirmationCode = (req, res) => {
             res.json('The confirmation code has been sent successfully');
         }
     });
-};
-
-exports.register = async (req, res) => {
-  try {
-    const data = req.body;
-    data.password = bcrypt.hashSync(data.password, 10);
-    const generatedCode = Math.floor(1000 + Math.random() * 9000);
-    data.code = generatedCode;
-    const user = new User(data);
-    await MailSenderManager.confirmationCode(user.email, user.code);
-    await user.create(); 
-    res.status(200).send('Registration complete');
-  } catch (error) {
-    res.status(400).send(error);
-  } 
 };
 
 exports.checkConfirmationCode = async (req, res) => {

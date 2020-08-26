@@ -113,7 +113,7 @@ class User {
     
     updateItem.updatedAt = new Date().getTime();
     _.forEach(updateItem, (item, key) => {
-      if (!['id', 'email', 'password', 'type', 'createdAt', 'code'].includes(key)) {
+      if (!['id', 'email', 'password', 'type', 'createdAt'].includes(key)) {
         const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
         params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
         params.ExpressionAttributeNames['#' + key] = key;
