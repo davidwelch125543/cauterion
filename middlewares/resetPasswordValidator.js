@@ -4,7 +4,8 @@ const { User } = require('../models/user.model');
 function ResetPasswordMiddleware() {
   return async (req, res, next) => {
     try {
-      const resetToken = req.headers['password_reset'];
+      const { resetToken } = req.body;
+      if (!resetToken) throw new Error('Reset token is missing');
       console.log('Reset token', resetToken);
       const userDetails = jwt.verify(resetToken, process.env.SECRET_KEY);
       const user = (await User.getUserById(userDetails.id)).Items[0];
