@@ -12,7 +12,8 @@ function ResetPasswordMiddleware() {
       console.log('User Details', userDetails);
       next();
     } catch (error) {
-      res.status(401).send('User Details');
+      console.log('Error occured in reset password middleware', error.message);
+      res.status(401).send({ error: error.message });
     }
   }
 }
