@@ -22,32 +22,18 @@ exports.login = async (req, res) => {
 exports.register = async (req, res) => {
   try {
     const data = req.body;
+    data.password = bcrypt.hashSync(data.password, 10);
     const generatedCode = Math.floor(1000 + Math.random() * 9000);
-    const user = await User.getUserByEmail(data.email);
-    let response = null;
-
-    if (user && !user.active) {
-      const passwordMatch = await bcrypt.compare(data.password, user.password);
-      if (!passwordMatch) throw new Error('User with provided email exists');
-      const updUser = new User({ ...user, code: generatedCode });
-      await MailSenderManager.confirmationCode(user.email, generatedCode);
-      await updUser.update();
-      response = 'Confirm your email address for activation.';
-    } else if(!user) {
-      data.password = bcrypt.hashSync(data.password, 10);
-      data.code = generatedCode;
-      const user = new User(data);
-      await MailSenderManager.confirmationCode(user.email, user.code);
-      await user.create();
-      response = 'Registration complete. Confirm your email address for activation.';
-    } else {
-      throw new Error('User with provided email exists');
-    }
-    res.status(200).send(response);
+    data.code = generatedCode;
+    const user = new User(data);
+    await MailSenderManager.confirmationCode(user.email, user.code);
+    await user.create(); 
+    res.status(200).send('Registration complete. Confirm your email address for activation.');
   } catch (error) {
-    res.status(400).send(error.message || error);
+    console.log('Error occured in registration', error.message);
+    res.status(400).send({ error: error.message });
   } 
-};
+}
 
 exports.logout = (req, res) => {
     console.log('test')
@@ -55,47 +41,49 @@ exports.logout = (req, res) => {
     res.status(200).json({msg: 'OK'})
 };
 
-exports.sendConfirmationCode = (req, res) => {
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    let foundUser = await User.getUserByEmail(email);
+    if (!foundUser) throw new Error('User is not found');
+    const randomCode = Math.floor(1000 + Math.random() * 9000);
+    await MailSenderManager.passwordReset(email, randomCode);
+    const updUser = new User({ ...foundUser, resetPasswordCode: randomCode });
+    await updUser.update();
+    res.status(200).send('You have requested generated code for password reset');
+  } catch (error) {
+    console.log('Error occured in forgot password', error);
+    res.status(409).send({ error: error.message });
+  }
+};
 
-    let data = req.body;
-    let email = data.email;
-    let randomCode = data.code;
+exports.changeForgottenPassword = async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    const user = req.user;
+    const updPassword = bcrypt.hashSync(newPassword, 10);
+    await User.changePassword(user.email, updPassword);
+    res.status(200).send('Password has been succesfully changed!');
+  } catch (error) {
+    console.log('Error occured in change forgotten password');
+    res.status(409).send({ message: error.message });
+  }
+};
 
-// create reusable transporter object using the default SMTP transport
-    let transporter = nodemailer.createTransport({
-      service: 'gmail',
-      host: 'smtp.gmail.com',
-      port: 465, // 587
-      secure: true, // true for 465, false for other ports
-      auth: {
-          user: 'sofiabruno3003', // generated ethereal user
-          pass: 'davmark11' // generated ethereal password
-      }
+exports.validatePasswordResetCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    const user = await User.getUserByEmail(email);
+    if (!user || user.resetPasswordCode !== code) throw new Error('Reset password code is not valid');
+
+    res.status(200).send({
+      message: 'Reset code confirmed',
+      'password_reset': jwt.sign({ id: user.id, resetPassword: true }, process.env.SECRET_KEY, { expiresIn: '1h' })
     });
-
-
-    // setup email data with unicode symbols
-    let mailOptions = {
-        from: 'Cauterion', // sender address
-        to: email, // list of receivers
-        subject: 'Email confirmation code', // Subject line
-        text: 'This is your confirmation code', // plain text body
-        html: `${randomCode}` // html body
-    };
-
-    // send mail with defined transport object
-    transporter.sendMail(mailOptions, (error, info) => {
-        console.log(error)
-        if (error) {
-            res.status(500).json({msg: error.toString()})
-        } else if (info) {
-
-            console.log('Message sent: %s', info.messageId);
-            // Preview only available when sending through an Ethereal account
-            console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
-            res.json('The confirmation code has been sent successfully');
-        }
-    });
+  } catch (error) {
+    console.log('Error occured in validating password reset code');
+    res.status(409).send({ error: error.message });
+  }
 };
 
 exports.checkConfirmationCode = async (req, res) => {
@@ -146,87 +134,5 @@ exports.updateProfile = async (req, res) => {
   } catch (error) {
     console.log('Failed in update profile', error);
     res.status(400).send(error);
-  }
-};
-
-exports.forgotPassword = async (req, res) => {
-// Getting validation result from express-validator
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty()) {
-//         return res.status(422).json(errors.array()[0]);
-//     }
-    const user = req.body;
-    console.log('forgot password!!!')
-    let foundUser = await User.getUserByEmail(user.email);
-    console.log(user)
-
-    if (!foundUser) {
-        res.status(500).json('User is not found');
-    } else {
-        const email = user.email;
-
-        // let tempToken = jwt.sign({
-        //     email: user.email,
-        //     id: user.id,
-        //
-        //     first_name: user.first_name,
-        //     last_name: user.last_name,
-        //     company_id: user.company_id,
-        //     gender: user.gender,
-        //     field_type: user.field_type,
-        //     user_type: user.user_type
-        // }, 'secretkey', {expiresIn: '1h'});
-
-        // create reusable transporter object using the default SMTP transport
-        let transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 587,
-            secure: false, // true for 465, false for other ports
-            auth: {
-                user: 'sofiabruno3003', // generated ethereal user
-                pass: 'davmark11' // generated ethereal password
-            }
-        });
-
-        let randomCode = Math.floor(1000 + Math.random() * 9000);
-        console.log("CODE" + randomCode)
-        // console.log(process.env)
-
-        // setup email data with unicode symbols
-        let mailOptions = {
-            from: 'Cauterion', // sender address
-            to: email, // list of receivers
-            subject: 'Password Reset', // Subject line
-            text: 'You recently requested a password reset', // plain text body
-            html: `${randomCode}` // html body
-        };
-
-        // send mail with defined transport object
-        transporter.sendMail(mailOptions, (error, info) => {
-            console.log(error)
-            if (error) {
-                res.status(500).json({msg: error.toString()})
-            } else if (info) {
-
-                console.log('Message sent: %s', info.messageId);
-                // Preview only available when sending through an Ethereal account
-                console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
-                res.json(randomCode);
-            }
-        });
-    }
-};
-
-exports.changeForgottenPassword = async (req, res) => {
-  console.log('here!!!!')
-  let data = req.body;
-  let newPassword = data.new_password;
-  let foundUser = await User.getUserByEmail(data.email);
-  if (!foundUser) {
-    res.status(500).json('User is not found');
-  } else {
-    data.password = bcrypt.hashSync(newPassword, 10);
-    // await Users.updateOne({password: data.password}, {email: data.email});
-    res.json('OK')
   }
 };

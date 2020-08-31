@@ -3,6 +3,7 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const validateMiddleware = require('../helpers/showIfErrors');
 const { AuthorizerMiddleware } = require('../middlewares/middleware.authorizer');
+const { ResetPasswordMiddleware } = require('../middlewares/resetPasswordValidator');
 const { registerValidationChain } = require('../validators/validateRegister');
 const { loginValidationChain } = require('../validators/validateLogin');
 const jwt = require('jsonwebtoken');
@@ -14,8 +15,11 @@ router.post('/login', loginValidationChain(), validateMiddleware, authController
 router.get('/logout', authController.logout);
 router.get('/get-profile', AuthorizerMiddleware(), authController.getProfile);
 router.put('/update-profile', AuthorizerMiddleware(), authController.updateProfile);
+
+// Password reset
 router.post('/forgot-password', authController.forgotPassword);
-router.put('/change-forgotten-password', authController.changeForgottenPassword);
+router.post('/validate-reset-code', authController.validatePasswordResetCode);
+router.put('/change-password', ResetPasswordMiddleware(), authController.changeForgottenPassword);
 
 // Passport.js Facebook auth routes
 router.get('/facebook', passport.authenticate('facebook', {session: false}));

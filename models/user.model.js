@@ -11,6 +11,7 @@ class User {
     this.email = obj.email;
     this.password = obj.password;
     this.code = obj.code;
+    this.resetPasswordCode = obj.resetPasswordCode;
     this.active = obj.active;
     this.type = obj.type;
     this.first_name = obj.first_name;
@@ -31,6 +32,7 @@ class User {
      email: this.email,
      password: this.password,
      code: this.code,
+     resetPasswordCode: this.resetPasswordCode,
      active: this.active,
      type: this.type,
      first_name: this.first_name,
@@ -119,6 +121,33 @@ class User {
         params.ExpressionAttributeNames['#' + key] = key;
         params.ExpressionAttributeValues[':' + key] = item;
       }
+    });
+    const response = await dynamoDbLib.call('update', params);
+    return response;
+  }
+
+  static async changePassword(email, newPassword) {
+    const user = await User.getUserByEmail(email);
+    const updUser = {
+      password: newPassword,
+      updatedAt: Date.now()
+    };
+    const params = {
+      TableName: tableName,
+      Key: {
+        id: user.id,
+      },
+      ExpressionAttributeValues: {
+      },
+      ExpressionAttributeNames: {
+      },
+      ReturnValues: 'ALL_NEW',
+    };
+    _.forEach(updUser, (item, key) => {
+      const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
+      params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
+      params.ExpressionAttributeNames['#' + key] = key;
+      params.ExpressionAttributeValues[':' + key] = item;
     });
     const response = await dynamoDbLib.call('update', params);
     return response;
