@@ -19,7 +19,7 @@ router.put('/update-profile', AuthorizerMiddleware(), authController.updateProfi
 // Password reset
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/validate-reset-code', authController.validatePasswordResetCode);
-router.put('/change-password', ResetPasswordMiddleware(), authController.changeForgottenPassword);
+router.post('/change-password', ResetPasswordMiddleware(), authController.changeForgottenPassword);
 
 // Passport.js Facebook auth routes
 router.get('/facebook', passport.authenticate('facebook', {session: false}));

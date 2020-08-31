@@ -5,6 +5,7 @@ function ResetPasswordMiddleware() {
   return async (req, res, next) => {
     try {
       const resetToken = req.headers['password_reset'];
+      console.log('Reset token', resetToken);
       const userDetails = jwt.verify(resetToken, process.env.SECRET_KEY);
       const user = (await User.getUserById(userDetails.id)).Items[0];
       if (!user || !userDetails.resetPassword) throw new Error('Access denied');
