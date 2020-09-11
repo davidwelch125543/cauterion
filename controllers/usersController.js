@@ -1,6 +1,5 @@
 const { SupportTicket } = require('../models/ticket.model');
 
-
 exports.createSupportTicket = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -13,7 +12,6 @@ exports.createSupportTicket = async (req, res) => {
     res.status(409).send(error);
   }
 };
-
 
 exports.getUserTickets = async (req, res) => {
   try {

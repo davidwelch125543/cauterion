@@ -3,6 +3,12 @@ const { getItemByGSIFull } = require('../lib/dynamo-requests');
 const _ = require('lodash');
 const uuid = require('uuid').v4;
 
+const AUTH_TYPES = Object.freeze({
+  LOCAL: 'local',
+  FACEBOOK: 'facebook',
+  GOOGLE: 'google'
+});
+
 const tableName = `users-dev`;
 
 class User {
@@ -11,6 +17,7 @@ class User {
     this.email = obj.email;
     this.password = obj.password;
     this.code = obj.code;
+    this.method = obj.method || AUTH_TYPES.LOCAL;
     this.resetPasswordCode = obj.resetPasswordCode;
     this.active = obj.active;
     this.type = obj.type;
@@ -32,6 +39,7 @@ class User {
      email: this.email,
      password: this.password,
      code: this.code,
+     method: this.method,
      resetPasswordCode: this.resetPasswordCode,
      active: this.active,
      type: this.type,
@@ -52,8 +60,8 @@ class User {
 
   async create() {
     const user = this.toModel();
-    user.id = uuid();
-    user.active = false;
+    user.id = user.id || uuid(); 
+    user.active = !(this.method === AUTH_TYPES.LOCAL);
     user.type = 'user';
     console.log('User create', user);
     const params = {
@@ -115,7 +123,7 @@ class User {
     
     updateItem.updatedAt = new Date().getTime();
     _.forEach(updateItem, (item, key) => {
-      if (!['id', 'email', 'password', 'type', 'createdAt'].includes(key)) {
+      if (!['id', 'email', 'password', 'type', 'method', 'createdAt'].includes(key)) {
         const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
         params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
         params.ExpressionAttributeNames['#' + key] = key;
@@ -169,4 +177,5 @@ class User {
 
 module.exports = {
   User,
+  AUTH_TYPES,
 };

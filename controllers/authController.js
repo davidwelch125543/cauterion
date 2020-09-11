@@ -136,3 +136,23 @@ exports.updateProfile = async (req, res) => {
     res.status(400).send(error);
   }
 };
+
+exports.facebookOAuth = async (req, res) => {
+  try {
+      if (!req.user) throw new Error('User is not authenticated');
+      const token = jwt.sign({ id: req.user.id, email: req.user.email }, process.env.SECRET_KEY, {expiresIn: '8h'});
+      res.status(200).send({ token });
+  } catch (error) {
+      res.status(401).send({ error: error.message });
+  }
+}
+
+exports.googleOAuth = async (req, res) => {
+  try {
+      if (!req.user) throw new Error('User is not authenticated');
+      const token = jwt.sign({ id: req.user.id, email: req.user.email }, process.env.SECRET_KEY, {expiresIn: '8h'});
+      res.status(200).send({ token });
+  } catch (error) {
+      res.status(401).send({ error: error.message });
+  }
+}
