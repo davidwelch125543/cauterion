@@ -4,7 +4,6 @@ dotenv.config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const path = require('path');
 
 // Express server config
 let port = process.env.PORT || 3003;
@@ -21,13 +20,6 @@ var corsOptions = {
   optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 app.use(cors(corsOptions));
-
-// Passport.js config
-const passport = require('passport');
-require('./config/passport');
-require('./config/google-passport-strategy')(passport);
-require('./config/facebook-passport-strategy')(passport);
-app.use(passport.initialize({}));
 
 // Routes
 app.use('/auth', require('./routes/auth'));

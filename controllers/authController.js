@@ -1,9 +1,14 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
 const { MailSenderManager } = require('../lib/ses-lib');
-const { User } = require('../models/user.model');
+const { User, AUTH_TYPES } = require('../models/user.model');
 const { uploadImage } = require('../helpers/uploads');
+const { OAuth2Client } = require('google-auth-library');
+
+const googleClient = new OAuth2Client({
+  clientId: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET
+})
 
 exports.login = async (req, res) => {
   try {
@@ -154,5 +159,34 @@ exports.googleOAuth = async (req, res) => {
       res.status(200).send({ token });
   } catch (error) {
       res.status(401).send({ error: error.message });
+  }
+}
+
+exports.googleSignIn = async (req, res) => {
+  try {
+    const { tokenId } = req.body;
+    const loginTicket = await googleClient.verifyIdToken({
+      idToken: tokenId,
+    });
+    const { sub, email, family_name, given_name } = loginTicket.getPayload();
+
+    let user = await User.getUserByEmail(email);
+    // Create a new user if not exists
+    if (!user) {
+      console.log('Creating a new user');
+      user = new User({
+        id: sub,
+        email,
+        method: AUTH_TYPES.GOOGLE,
+        first_name: given_name,
+        last_name: family_name,
+      });
+      await user.create();
+    }
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.SECRET_KEY, {expiresIn: '8h'});
+    res.status(200).send({ token });
+  } catch (error) {
+    console.log('Error occured in Google SignIn: ', error);
+    res.status(409).send({ error: error.message });
   }
 }

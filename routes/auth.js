@@ -6,7 +6,6 @@ const { AuthorizerMiddleware } = require('../middlewares/middleware.authorizer')
 const { ResetPasswordMiddleware } = require('../middlewares/resetPasswordValidator');
 const { registerValidationChain } = require('../validators/validateRegister');
 const { loginValidationChain } = require('../validators/validateLogin');
-const passport = require('passport');
 
 router.post('/register', registerValidationChain(), validateMiddleware, authController.register);
 router.post('/check-confirmation-code', authController.checkConfirmationCode);
@@ -21,10 +20,10 @@ router.post('/validate-reset-code', authController.validatePasswordResetCode);
 router.post('/change-password', ResetPasswordMiddleware(), authController.changeForgottenPassword);
 
 // Google authentication
-router.post('/google', passport.authenticate('googleToken', { session: false }), authController.googleOAuth);
+router.post('/google', authController.googleSignIn);
 
 // Facebook authentication
-router.post('/facebook', passport.authenticate('facebookToken', { session: false }), authController.facebookOAuth);
+// router.post('/facebook', passport.authenticate('facebookToken', { session: false }), authController.facebookOAuth);
 
 module.exports = router;
 
