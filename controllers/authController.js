@@ -4,6 +4,7 @@ const { MailSenderManager } = require('../lib/ses-lib');
 const { User, AUTH_TYPES } = require('../models/user.model');
 const { uploadImage } = require('../helpers/uploads');
 const { OAuth2Client } = require('google-auth-library');
+const fetch = require('node-fetch').default;
 
 const googleClient = new OAuth2Client({
   clientId: process.env.GOOGLE_CLIENT_ID,
@@ -142,16 +143,6 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
-exports.facebookOAuth = async (req, res) => {
-  try {
-      if (!req.user) throw new Error('User is not authenticated');
-      const token = jwt.sign({ id: req.user.id, email: req.user.email }, process.env.SECRET_KEY, {expiresIn: '8h'});
-      res.status(200).send({ token });
-  } catch (error) {
-      res.status(401).send({ error: error.message });
-  }
-}
-
 exports.googleOAuth = async (req, res) => {
   try {
       if (!req.user) throw new Error('User is not authenticated');
@@ -173,7 +164,7 @@ exports.googleSignIn = async (req, res) => {
     let user = await User.getUserByEmail(email);
     // Create a new user if not exists
     if (!user) {
-      console.log('Creating a new user');
+      console.log('Creating a new Google user');
       user = new User({
         id: sub,
         email,
@@ -188,5 +179,34 @@ exports.googleSignIn = async (req, res) => {
   } catch (error) {
     console.log('Error occured in Google SignIn: ', error);
     res.status(409).send({ error: error.message });
+  }
+}
+
+exports.facebookSignIn = async (req, res) => {
+  try {
+    const { userId, accessToken } = req.body;
+    const fbUserInfoGraphURL = `https://graph.facebook.com/${userId}?fields=id,first_name,last_name,email&access_token=${accessToken}`;
+    const userInfoPromise = await fetch(fbUserInfoGraphURL, {
+      method: 'GET'
+    });
+    const { id, first_name, last_name, email } = await userInfoPromise.json();
+    let user = await User.getUserByEmail(email);
+    // Create a new user if not exists
+    if (!user) {
+      console.log('Creating a new FB user');
+      user = new User({
+        id,
+        email,
+        method: AUTH_TYPES.FACEBOOK,
+        first_name,
+        last_name,
+      });
+      await user.create();
+    }
+    
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.SECRET_KEY, {expiresIn: '8h'});
+    res.status(200).send({ token });
+  } catch (error) {
+    res.status(401).send({ error: error.message });
   }
 }

@@ -23,7 +23,7 @@ router.post('/change-password', ResetPasswordMiddleware(), authController.change
 router.post('/google', authController.googleSignIn);
 
 // Facebook authentication
-// router.post('/facebook', passport.authenticate('facebookToken', { session: false }), authController.facebookOAuth);
+router.post('/facebook', authController.facebookSignIn);
 
 module.exports = router;
 
