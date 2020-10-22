@@ -25,6 +25,7 @@ app.use(cors(corsOptions));
 app.use('/auth', require('./routes/auth'));
 app.use('/users', require('./routes/users'));
 app.use('/admin', require('./routes/admin'));
+app.use('/members', require('./routes/members'));
 
 // Run server
 app.listen(port, () => {
