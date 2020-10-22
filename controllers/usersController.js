@@ -1,4 +1,6 @@
+const { Test } = require('../models/test.model');
 const { SupportTicket } = require('../models/ticket.model');
+const { User } = require('../models/user.model');
 
 exports.createSupportTicket = async (req, res) => {
   try {
@@ -47,6 +49,25 @@ exports.updateOwnTicket = async (req, res) => {
     res.status(200).send(updatedTicket);
   } catch (error) {
     console.log('Update support ticket failed', error);
+    res.status(400).send(error);
+  }
+}
+
+exports.getUserInfoFromQR = async (req, res) => {
+  try {
+		const { qrUserId } = req.params;
+
+		const qrUserInfo = (await User.getUserById(qrUserId)).Items[0];
+		if (!qrUserInfo) throw new Error('Identyfing user process failed)');
+		const tests = await Test.getTestsByUserId(qrUserId);
+    res.status(200).send({
+			result: {
+				...qrUserInfo,
+				tests: tests && tests.length ? tests : []
+			}
+		});
+  } catch (error) {
+    console.log('QR user info error occured', error);
     res.status(400).send(error);
   }
 }
