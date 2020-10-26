@@ -1,10 +1,12 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { MailSenderManager } = require('../lib/ses-lib');
+const { SMSSenderManager } = require('../lib/sms-lib');
 const { User, AUTH_TYPES } = require('../models/user.model');
 const { uploadImage } = require('../helpers/uploads');
 const { OAuth2Client } = require('google-auth-library');
 const fetch = require('node-fetch').default;
+const validator = require('validator').default;
 
 const googleClient = new OAuth2Client({
   clientId: process.env.GOOGLE_CLIENT_ID,
@@ -13,9 +15,7 @@ const googleClient = new OAuth2Client({
 
 exports.login = async (req, res) => {
   try {
-    // Selecting an employee that has an email matching request one
-  const { email } = req.body;
-  const user = await User.getUserByEmail(email);
+  const { user } = req.body;
   res.status(200).json({
     token: jwt.sign({ id: user.id, email: user.email }, process.env.SECRET_KEY, {expiresIn: '8h'})
   });
@@ -30,11 +30,16 @@ exports.register = async (req, res) => {
     const data = req.body;
     data.password = bcrypt.hashSync(data.password, 10);
     const generatedCode = Math.floor(1000 + Math.random() * 9000);
-    data.code = generatedCode;
-    const user = new User(data);
-    await MailSenderManager.confirmationCode(user.email, user.code);
-    await user.create(); 
-    res.status(200).send('Registration complete. Confirm your email address for activation.');
+		data.code = generatedCode;
+		const user = new User(data);
+		
+		if (user.email) {
+			await MailSenderManager.confirmationCode(user.email, user.code);
+		} else if (user.phone) {
+			await SMSSenderManager.confirmationCode(user.phone, user.code);
+		}  
+    await user.create();
+    res.status(200).send('Registration complete. Confirm your email address or check SMS for activation.');
   } catch (error) {
     console.log('Error occured in registration', error.message);
     res.status(400).send({ error: error.message });
@@ -49,11 +54,23 @@ exports.logout = (req, res) => {
 
 exports.forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
-    let foundUser = await User.getUserByEmail(email);
-    if (!foundUser) throw new Error('User is not found');
-    const randomCode = Math.floor(1000 + Math.random() * 9000);
-    await MailSenderManager.passwordReset(email, randomCode);
+		const { login } = req.body || {};
+		const isEmail = validator.isEmail(login);
+		const isPhoneNumber = validator.isMobilePhone(login);
+
+		const randomCode = Math.floor(1000 + Math.random() * 9000);
+
+		let foundUser = null;
+		if (isEmail) {
+			foundUser = await User.getUserByEmail(login);
+			await MailSenderManager.passwordReset(email, randomCode);
+		} else if (isPhoneNumber) {
+			foundUser = await User.getUserByPhoneNumber(login);
+			await SMSSenderManager.passwordReset(foundUser.phone, randomCode);
+		}
+
+		if (!foundUser) throw new Error('User is not found');
+		
     const updUser = new User({ ...foundUser, resetPasswordCode: randomCode });
     await updUser.update();
     res.status(200).send('You have requested generated code for password reset');
@@ -68,7 +85,7 @@ exports.changeForgottenPassword = async (req, res) => {
     const { newPassword } = req.body;
     const user = req.user;
     const updPassword = bcrypt.hashSync(newPassword, 10);
-    await User.changePassword(user.email, updPassword);
+    await User.changePassword(user.id, updPassword);
     res.status(200).send('Password has been succesfully changed!');
   } catch (error) {
     console.log('Error occured in change forgotten password');
@@ -78,13 +95,23 @@ exports.changeForgottenPassword = async (req, res) => {
 
 exports.validatePasswordResetCode = async (req, res) => {
   try {
-    const { email, code } = req.body;
-    const user = await User.getUserByEmail(email);
-    if (!user || user.resetPasswordCode !== code) throw new Error('Reset password code is not valid');
+		const { login, code } = req.body;
+		const isEmail = validator.isEmail(login);
+		const isPhoneNumber = validator.isMobilePhone(login);
+
+		let foundUser = null;
+
+		if (isEmail) {
+			foundUser = await User.getUserByEmail(login);
+		} else if (isPhoneNumber) {
+			foundUser = await User.getUserByPhoneNumber(login);
+		}
+
+    if (!foundUser || foundUser.resetPasswordCode !== code) throw new Error('Reset password code is not valid');
 
     res.status(200).send({
       message: 'Reset code confirmed',
-      'password_reset': jwt.sign({ id: user.id, resetPassword: true }, process.env.SECRET_KEY, { expiresIn: '1h' })
+      'password_reset': jwt.sign({ id: foundUser.id, resetPassword: true }, process.env.SECRET_KEY, { expiresIn: '1h' })
     });
   } catch (error) {
     console.log('Error occured in validating password reset code');
@@ -94,14 +121,12 @@ exports.validatePasswordResetCode = async (req, res) => {
 
 exports.checkConfirmationCode = async (req, res) => {
   try {
-    const data = req.body;
-    let user = await User.getUserByEmail(data.email);
-
-    if (!user || user.active || user.code !== data.code) throw new Error('Invalid request');
+		let { user, code } = req.body;
+    if (!user || user.active || user.code !== code) throw new Error('Invalid request');
     user = new User({ ...user, active: true });
     await user.update();
     res.status(200).json({
-    token: jwt.sign({ id: user.id, email: user.email }, process.env.SECRET_KEY, {expiresIn: '8h'})
+    	token: jwt.sign({ id: user.id, email: user.email }, process.env.SECRET_KEY, {expiresIn: '8h'})
     });
   } catch (error) {
     console.log('Error in confirmation', error);

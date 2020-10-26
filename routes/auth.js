@@ -6,9 +6,10 @@ const { AuthorizerMiddleware } = require('../middlewares/middleware.authorizer')
 const { ResetPasswordMiddleware } = require('../middlewares/resetPasswordValidator');
 const { registerValidationChain } = require('../validators/validateRegister');
 const { loginValidationChain } = require('../validators/validateLogin');
+const { confirmValidationChain } = require('../validators/validateConfCode');
 
 router.post('/register', registerValidationChain(), validateMiddleware, authController.register);
-router.post('/check-confirmation-code', authController.checkConfirmationCode);
+router.post('/check-confirmation-code', confirmValidationChain(), validateMiddleware, authController.checkConfirmationCode);
 router.post('/login', loginValidationChain(), validateMiddleware, authController.login);
 router.get('/logout', authController.logout);
 router.get('/get-profile', AuthorizerMiddleware(), authController.getProfile);

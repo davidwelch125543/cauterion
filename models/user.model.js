@@ -100,6 +100,26 @@ class User {
       value: email
     })).Items[0];
     return user;
+	}
+
+	static async getUserByPhoneNumber(phone) {
+		const user = (await getItemByGSIFull({
+      TableName: tableName,
+      IndexName: 'phone-index',
+      attribute: 'phone',
+      value: phone
+    })).Items[0];
+    return user;
+	}
+	
+	static async getUserByEmail(email) {
+    const user = (await getItemByGSIFull({
+      TableName: tableName,
+      IndexName: 'email-index',
+      attribute: 'email',
+      value: email
+    })).Items[0];
+    return user;
   }
 
   static async getUserById(id) {
@@ -143,8 +163,8 @@ class User {
     return response;
   }
 
-  static async changePassword(email, newPassword) {
-    const user = await User.getUserByEmail(email);
+  static async changePassword(userId, newPassword) {
+    const user = (await User.getUserById(userId)).Items[0];
     const updUser = {
       password: newPassword,
       updatedAt: Date.now()

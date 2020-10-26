@@ -1,6 +1,7 @@
 const { SupportTicket } = require('../models/ticket.model');
 const { User } = require('../models/user.model')
 const jwt = require('jsonwebtoken');
+const _ = require('lodash');
 
 const loginAsAdmin = async (req, res) => {
   try {
@@ -18,7 +19,15 @@ const loginAsAdmin = async (req, res) => {
 const getTickets = async (req, res) => {
   try {
     const data = req.body;
-    const tickets = await SupportTicket.getSupportTickets(data);
+		const tickets = await SupportTicket.getSupportTickets(data);
+		if (tickets && Array.isArray(tickets.Items)) {
+			await Promise.all(tickets.Items.map(async (item) => {
+				const user = (await User.getUserById(item.userId)).Items[0];
+				if (user) {
+					item.user = _.pick(user, ['first_name', 'last_name', 'email', 'phone']);
+				}
+			}));
+		}
     res.status(200).send(tickets);
   } catch (error) {
     console.log('Get Tickets failed', error);
