@@ -8,5 +8,6 @@ const UserAuthorizerMiddleware = AuthorizerMiddleware();
 router.post('/', UserAuthorizerMiddleware, membersController.createFamilyAccount);
 router.get('/', UserAuthorizerMiddleware, membersController.getMembersList);
 router.get('/:memberId', UserAuthorizerMiddleware, membersController.getMemberById);
+router.put('/:memberId', UserAuthorizerMiddleware, membersController.updateMember);
 
 module.exports = router;

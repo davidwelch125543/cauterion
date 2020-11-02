@@ -16,7 +16,13 @@ const scanTest = async (req, res) => {
   try {
     const data = req.body;
     const user = req.user;
-  
+	
+		if (data.memberId) {
+			const memberUser = (await User.getUserById(data.memberId)).Items[0];
+			if (!memberUser || memberUser.owner !== user.id) throw new Error('Invalid member id');
+			user.id = data.memberId;
+		}
+		
     // Get test by serial number
     const test = await Test.getTestBySerialNumber(data.serialNumber);
     let response;
@@ -47,10 +53,16 @@ const scanTest = async (req, res) => {
 
 const updateTest = async (req, res) => {
   try {
-    const userId = req.user.id;
+    let userId = req.user.id;
     const testId = req.params.id;
     const data = req.body;
     const test = (await Test.getTestById(testId)).Items[0];
+
+		if (data.memberId) {
+			const memberUser = (await User.getUserById(data.memberId)).Items[0];
+			if (!memberUser || memberUser.owner !== userId) throw new Error('Invalid member id');
+			userId = data.memberId;
+		}
 
     if (!test || test.userId !== userId) throw new Error('Test doesn\'t exist');
   

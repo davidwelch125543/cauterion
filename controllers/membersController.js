@@ -4,7 +4,7 @@ const { Test } = require('../models/test.model');
 exports.createFamilyAccount = async (req, res) => {
   try {
 		const { id: userId } = req.user;
-		const data = User.memberBodyPicker(req.body);
+		const data = await User.memberBodyValidator(req.body);
 		const currentUser = new User(data);
 		const member = await currentUser.addMember(userId);
 
@@ -16,6 +16,24 @@ exports.createFamilyAccount = async (req, res) => {
     res.status(400).send({ error: error.message });
   }
 };
+
+exports.updateMember = async (req, res) => {
+	try {
+		const { id: userId } = req.user;
+		const { memberId } = req.params;
+		const data = await User.memberBodyValidator(req.body, 'update');
+
+		const currentUser = new User(data);
+		const member = await currentUser.updateMember(userId, memberId);
+
+		res.status(200).send({
+			result: member
+		});
+  } catch (error) {
+    console.log('Error occured: Add family account: ', error);
+    res.status(400).send({ error: error.message });
+  }
+}
 
 exports.getMembersList = async (req, res) => {
   try {

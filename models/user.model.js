@@ -2,6 +2,7 @@ const dynamoDbLib = require('../lib/dynamodb-lib');
 const { uploadImage } = require('../helpers/uploads');
 const { getItemByGSIFull } = require('../lib/dynamo-requests');
 const _ = require('lodash');
+const { default: validator } = require('validator');
 const uuid = require('uuid').v4;
 
 const AUTH_TYPES = Object.freeze({
@@ -205,17 +206,32 @@ class User {
 	
 	
 	// MEMBERS -------------------------------------------------------------------------------
-	static memberBodyPicker(data) {
+	static async memberBodyValidator(data, actionType = 'create') { // actionType => 'create', 'update'
 		const body = _.pick(data, ['email', 'first_name', 'last_name', 'nationalId', 'nationality', 'phone', 'gender', 'birthday', 'avatar']);
+		const isValidMobile = validator.isMobilePhone(body.phone || '');
+		const isValidEmail = validator.isEmail(body.email || '');
+
+		if (actionType === 'create') {
+			if (!isValidMobile || !isValidEmail || !body.nationalId) throw new Error('Invalid email/password or missing nationalId');
+	
+			const emailMatchUser = await this.getUserByEmail(body.email);
+			const phoneMatchUser = await this.getUserByPhoneNumber(body.phone);
+	
+			if (emailMatchUser || phoneMatchUser) throw new Error('User with provided email/phone already exists');
+		} else if (actionType === 'update') {
+			let phoneMatchUser, emailMatchUser = null;
+			if ((body.phone && !isValidMobile) || (body.email && !isValidEmail)) throw new Error('Invalid email/password');
+			
+			if (body.phone) phoneMatchUser = await this.getUserByPhoneNumber(body.phone);
+			if (body.email) emailMatchUser = await this.getUserByEmail(body.email);
+
+			if (phoneMatchUser || emailMatchUser) throw new Error('User with provided email/phone already exists');
+		}
 		return body;
 	}
 
 	async addMember(userId) {
 			const member = this.toModel();
-			if (this.email) {
-				const exUser = await User.getUserByEmail(this.email);
-				if (exUser) throw new Error('User with provided email already exist');
-			}
 			member.id = uuid();
 			member.owner = userId;
 			member.active = false;
@@ -235,6 +251,42 @@ class User {
 			};
 			await dynamoDbLib.call('put', params);
 			return member;
+	}
+
+	async updateMember(userId, memberId) {
+		const member = this.toModel();
+		const exMember = (await User.getUserById(memberId)).Items[0];
+		if (!exMember || exMember.owner !== userId) throw new Error('Invalid request');
+
+    const params = {
+      TableName: tableName,
+      Key: {
+        id: memberId,
+      },
+      ExpressionAttributeValues: {
+      },
+      ExpressionAttributeNames: {
+      },
+      ReturnValues: 'ALL_NEW',
+    };
+		
+		const nationalId = member.nationalId && !member.nationalId.startsWith('http')
+      ? (await uploadImage(memberId, member.nationalId, 'national')).Location : null;
+		const avatar = member.avatar && !member.avatar.startsWith('http')
+			? (await uploadImage(memberId, member.avatar, 'avatar')).Location : null;
+		if (avatar) member.avatar = avatar;
+		if (nationalId) member.nationalId = nationalId;
+
+    _.forEach(member, (item, key) => {
+      if (!['id', 'owner', 'createdAt'].includes(key)) {
+        const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
+        params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
+        params.ExpressionAttributeNames['#' + key] = key;
+        params.ExpressionAttributeValues[':' + key] = item;
+      }
+    });
+    const response = await dynamoDbLib.call('update', params);
+    return response;
 	}
 
 	static async retrieveMembers(userId, options = {}) {
