@@ -2,7 +2,7 @@ const dynamoDbLib = require('../lib/dynamodb-lib');
 const { getItemByGSIFull } = require('../lib/dynamo-requests');
 const _ = require('lodash');
 const uuid = require('uuid').v4;
-const { uploadImage } = require('../helpers/uploads');
+const { uploadFileInS3 } = require('../helpers/uploads');
 
 const table = 'tests-dev';
 
@@ -107,7 +107,7 @@ class Test {
     
     // TO DO 12 min expire check 
     const testImage = this.image && !this.image.startsWith('http')
-      ? (await uploadImage(this.userId, this.image, 'test')).Location : null;
+      ? (await uploadFileInS3(this.userId, this.image, 'test')).url : null;
     if (testImage) {
       this.image = testImage;
       updatedItem.image = testImage;

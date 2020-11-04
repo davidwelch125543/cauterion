@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const { MailSenderManager } = require('../lib/ses-lib');
 const { SMSSenderManager } = require('../lib/sms-lib');
 const { User, AUTH_TYPES } = require('../models/user.model');
-const { uploadImage } = require('../helpers/uploads');
+const { uploadFileInS3 } = require('../helpers/uploads');
 const { OAuth2Client } = require('google-auth-library');
 const fetch = require('node-fetch').default;
 const validator = require('validator').default;
@@ -152,9 +152,9 @@ exports.updateProfile = async (req, res) => {
     let user = req.user;
 
     const nationalId = data.nationalId && !data.nationalId.startsWith('http')
-      ? (await uploadImage(user.id, data.nationalId, 'national')).Location : null;
+      ? (await uploadFileInS3(user.id, data.nationalId, 'national')).url : null;
     const avatar = data.avatar && !data.avatar.startsWith('http')
-      ? (await uploadImage(user.id, data.avatar, 'avatar')).Location : null;
+      ? (await uploadFileInS3(user.id, data.avatar, 'avatar')).url : null;
     if (avatar) data.avatar = avatar;
     if (nationalId) data.nationalId = nationalId;
     

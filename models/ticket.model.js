@@ -2,7 +2,7 @@ const dynamoDbLib = require('../lib/dynamodb-lib');
 const { getItemByGSIFull } = require('../lib/dynamo-requests');
 const _ = require('lodash');
 const uuid = require('uuid').v4;
-const { uploadImage } = require('../helpers/uploads');
+const { uploadFileInS3 } = require('../helpers/uploads');
 
 const table = 'supportTickets-dev';
 
@@ -16,16 +16,18 @@ class SupportMessage {
   constructor(obj) {
     this.id = obj.id;
     this.text = obj.text;
-    this.owner = obj.owner;
+		this.owner = obj.owner;
+		this.files = obj.files;
     this.createdAt = obj.createdAt
   }
 
   toModel() {
-    if (!this.text) throw new Error('Message text is empty');
+    if (!this.text && !this.files) throw new Error('Message content is empty');
     let model = {
       id: this.id || uuid(),
       text: this.text,
-      owner: this.owner,
+			owner: this.owner,
+			files: this.files,
       createdAt: this.createdAt || Date.now()
     }
     return model;
@@ -72,7 +74,7 @@ class SupportTicket {
     this.updatedAt = Date.now();
     this.status = TICKET_STATUS.PENDING;
     this.userId_status = `${this.userId}#${this.status}`;
-    const supportTicketImage = this.image ? (await uploadImage(this.userId, this.image, 'support')).Location : null;
+    const supportTicketImage = this.image ? (await uploadFileInS3(this.userId, this.image, 'support')).url : null;
     if (supportTicketImage) {
       this.image = supportTicketImage;
     }
@@ -134,10 +136,23 @@ class SupportTicket {
     if (userType !== 'admin' && ticket.userId !== userId) throw new Error('Access denied');
 
     if (updatedData && updatedData.message) {
+			// Uploaded files limit (2)
+			if (Array.isArray(updatedData.message.files)) {
+				const filesOtd = [];
+				if (updatedData.message.files.length > 2) throw new Error('Upload limit is 2.');
+				for (const attachedFile of updatedData.message.files) {
+					const data = await uploadFileInS3(userId || 'admin', attachedFile.content, 'support', 'all');
+					filesOtd.push(data);
+				}
+				updatedData.message.files = filesOtd;
+			}
       const message = (new SupportMessage({ owner: userType, ...updatedData.message })).toModel();
       ticket.messages.push(message);
       ticket.status = userType === 'admin' ? TICKET_STATUS.REPLIED : TICKET_STATUS.PENDING;
-    }
+		}
+		
+	
+
     if (updatedData.status && updatedData.status === TICKET_STATUS.CLOSED) ticket.status = TICKET_STATUS.CLOSED;
     
     const params = {

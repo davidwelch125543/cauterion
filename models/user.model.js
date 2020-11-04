@@ -1,5 +1,5 @@
 const dynamoDbLib = require('../lib/dynamodb-lib');
-const { uploadImage } = require('../helpers/uploads');
+const { uploadFileInS3 } = require('../helpers/uploads');
 const { getItemByGSIFull } = require('../lib/dynamo-requests');
 const _ = require('lodash');
 const { default: validator } = require('validator');
@@ -238,9 +238,9 @@ class User {
 			member.type = USER_TYPES.MEMBER;
 
 			const nationalId = member.nationalId && !member.nationalId.startsWith('http')
-      	? (await uploadImage(member.id, member.nationalId, 'national')).Location : null;
+      	? (await uploadFileInS3(member.id, member.nationalId, 'national')).url : null;
     	const avatar = member.avatar && !member.avatar.startsWith('http')
-      	? (await uploadImage(member.id, member.avatar, 'avatar')).Location : null;
+      	? (await uploadFileInS3(member.id, member.avatar, 'avatar')).url : null;
     	if (avatar) member.avatar = avatar;
     	if (nationalId) member.nationalId = nationalId;
 
@@ -271,9 +271,9 @@ class User {
     };
 		
 		const nationalId = member.nationalId && !member.nationalId.startsWith('http')
-      ? (await uploadImage(memberId, member.nationalId, 'national')).Location : null;
+      ? (await uploadFileInS3(memberId, member.nationalId, 'national')).url : null;
 		const avatar = member.avatar && !member.avatar.startsWith('http')
-			? (await uploadImage(memberId, member.avatar, 'avatar')).Location : null;
+			? (await uploadFileInS3(memberId, member.avatar, 'avatar')).url : null;
 		if (avatar) member.avatar = avatar;
 		if (nationalId) member.nationalId = nationalId;
 
