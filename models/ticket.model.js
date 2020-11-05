@@ -151,8 +151,6 @@ class SupportTicket {
       ticket.status = userType === 'admin' ? TICKET_STATUS.REPLIED : TICKET_STATUS.PENDING;
 		}
 		
-	
-
     if (updatedData.status && updatedData.status === TICKET_STATUS.CLOSED) ticket.status = TICKET_STATUS.CLOSED;
     
     const params = {

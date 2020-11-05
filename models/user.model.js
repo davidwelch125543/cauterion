@@ -1,6 +1,8 @@
 const dynamoDbLib = require('../lib/dynamodb-lib');
 const { uploadFileInS3 } = require('../helpers/uploads');
+const bcrypt = require('bcryptjs');
 const { getItemByGSIFull } = require('../lib/dynamo-requests');
+const { MailSenderManager } = require('../lib/ses-lib');
 const _ = require('lodash');
 const { default: validator } = require('validator');
 const uuid = require('uuid').v4;
@@ -13,6 +15,7 @@ const AUTH_TYPES = Object.freeze({
 
 const USER_TYPES = Object.freeze({
 	ADMIN: 'admin',
+	OPERATOR: 'operator',
 	USER: 'user',
 	MEMBER: 'member'
 });
@@ -68,9 +71,10 @@ class User {
     return model;
   }
 
+	// #region  USER/ADMIN ----------------------------------------------------------------------
   async create() {
     const user = this.toModel();
-    user.id = user.id || uuid(); 
+    user.id = user.id || uuid();
     user.active = !(this.method === AUTH_TYPES.LOCAL);
     user.type = 'user';
     console.log('User create', user);
@@ -189,7 +193,8 @@ class User {
     });
     const response = await dynamoDbLib.call('update', params);
     return response;
-  }
+	}
+	
 
   static async delete(id) {
     const user = (await this.getUserById(id)).Items[0];
@@ -203,9 +208,9 @@ class User {
     const responseData = await dynamoDbLib.call('delete', params);
     console.log('User removed', responseData);
 	}
+	//#endregion
 	
-	
-	// MEMBERS -------------------------------------------------------------------------------
+	// #region MEMBERS --------------------------------------------------------------------------
 	static async memberBodyValidator(data, actionType = 'create') { // actionType => 'create', 'update'
 		const body = _.pick(data, ['email', 'first_name', 'last_name', 'nationalId', 'nationality', 'phone', 'gender', 'birthday', 'avatar']);
 		const isValidMobile = validator.isMobilePhone(body.phone || '');
@@ -300,6 +305,46 @@ class User {
     });
     return membersList;
 	}
+	//#endregion
+	
+	// #region OPERATORS ------------------------------------------------------------------------
+	static async registerOperator(body) {
+		const data = _.pick(body, ['first_name', 'last_name', 'email']);
+		if (!validator.isEmail(data.email)) throw new Error('Email is not valid');
+		const exUser = await this.getUserByEmail(data.email);
+		if (exUser) throw new Error('Email already exists in system');
+
+		const operator = new User(data);
+		const operatorModel = operator.toModel();
+		operatorModel.id = uuid();
+		operatorModel.type = USER_TYPES.OPERATOR;
+		operatorModel.active = true;
+		operatorModel.method = AUTH_TYPES.LOCAL;
+
+		const genPassword = Math.random().toString(36).slice(-8);
+		const encryptedPassword = bcrypt.hashSync(genPassword, 10);
+
+		operatorModel.password = encryptedPassword;
+		await MailSenderManager.submitOperator(operatorModel.email, genPassword);
+
+		const params = {
+      TableName: tableName,
+      Item: operatorModel,
+    };
+    return dynamoDbLib.call('put', params);
+	}
+
+	static async retrieveOperators() {
+		const operators = (await getItemByGSIFull({
+			TableName: tableName,
+			IndexName: 'type-createdAt-index',
+			attribute: 'type',
+			value: 'operator',
+			ScanIndexForward: true
+		})).Items;
+		return operators;
+	}
+	//#endregion 
 }
 
 module.exports = {
