@@ -1,14 +1,15 @@
 const { SupportTicket } = require('../models/ticket.model');
-const { User } = require('../models/user.model')
+const { User, USER_TYPES } = require('../models/user.model')
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
 
-const loginAsAdmin = async (req, res) => {
+const adminLogin = async (req, res) => {
   try {
   const { email } = req.body;
   const user = await User.getUserByEmail(email);
   res.status(200).json({
-    token: jwt.sign({ id: user.id, email: user.email, type: user.type }, process.env.SECRET_KEY, {expiresIn: '8h'})
+		token: jwt.sign({ id: user.id, email: user.email, type: user.type }, process.env.SECRET_KEY, {expiresIn: '8h'}),
+		type: user.type
   });
   } catch (error) {
     console.log('Login failed', error);
@@ -18,8 +19,9 @@ const loginAsAdmin = async (req, res) => {
 
 const getTickets = async (req, res) => {
   try {
+		const user = req.user;
     const data = req.body;
-		const tickets = await SupportTicket.getSupportTickets(data);
+		const tickets = await SupportTicket.getSupportTickets(data, user);
 		if (tickets && Array.isArray(tickets.Items)) {
 			await Promise.all(tickets.Items.map(async (item) => {
 				const user = (await User.getUserById(item.userId)).Items[0];
@@ -37,8 +39,10 @@ const getTickets = async (req, res) => {
 
 const getTicketById = async (req, res) => {
   try {
+		const user = req.user;
     const ticketId = req.params.id;
-    const ticket = (await SupportTicket.getById(ticketId)).Items[0];
+		const ticket = (await SupportTicket.getById(ticketId)).Items[0];
+		if (user.type === USER_TYPES.OPERATOR && ticket.operator !== user.id) throw new Error('Invalid ticket!');
     res.status(200).send(ticket);
   } catch (error) {
    console.log('Get ticket by Id failed', error);
@@ -48,9 +52,10 @@ const getTicketById = async (req, res) => {
 
 const updateSupportTicket = async (req, res) => {
   try {
+		const user = req.user;
     const ticketId = req.params.id;
     const data = req.body;
-    const updatedTicket = await SupportTicket.update(ticketId, null, data, 'admin');
+    const updatedTicket = await SupportTicket.update(ticketId, user.id, data, user.type);
     res.status(200).send(updatedTicket);
   } catch (error) {
     console.log('Update support ticket failed', error);
@@ -81,7 +86,7 @@ const getUserInfo = async (req, res) => {
 }
 
 module.exports = {
-  loginAsAdmin,
+  adminLogin,
   getTickets,
   getTicketById,
   updateSupportTicket,

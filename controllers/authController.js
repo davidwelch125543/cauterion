@@ -63,7 +63,7 @@ exports.forgotPassword = async (req, res) => {
 		let foundUser = null;
 		if (isEmail) {
 			foundUser = await User.getUserByEmail(login);
-			await MailSenderManager.passwordReset(email, randomCode);
+			await MailSenderManager.passwordReset(login, randomCode);
 		} else if (isPhoneNumber) {
 			foundUser = await User.getUserByPhoneNumber(login);
 			await SMSSenderManager.passwordReset(foundUser.phone, randomCode);

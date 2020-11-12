@@ -1,5 +1,6 @@
 const { User } = require('../models/user.model');
 const { Test } = require('../models/test.model');
+const { MailSenderManager } = require('../lib/ses-lib');
 
 exports.createFamilyAccount = async (req, res) => {
   try {
@@ -68,3 +69,18 @@ exports.getMemberById = async (req, res) => {
     res.status(400).send({ error: error.message });
   }
 };
+
+exports.requestForStandaloneAccount = async (req, res) => {
+	try {
+		const { id: userId } = req.user;
+		const { memberId } = req.params;
+		const member = (await User.getUserById(memberId)).Items[0];
+		if (!member || member.owner !== userId) throw new Error('Invalid memberId');
+		await MailSenderManager.convertToStandaloneAccount(member.email);
+		await User.convertMemberToAccount(member);
+		res.status(200).send('Success');
+	} catch (error) {
+		console.log('Standalone acc. request failed', error);
+		res.status(409).send({ message: error.message });
+	}
+}

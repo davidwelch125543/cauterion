@@ -3,6 +3,7 @@ const { getItemByGSIFull } = require('../lib/dynamo-requests');
 const _ = require('lodash');
 const uuid = require('uuid').v4;
 const { uploadFileInS3 } = require('../helpers/uploads');
+const { USER_TYPES } = require('./user.model');
 
 const table = 'supportTickets-dev';
 
@@ -38,14 +39,16 @@ class SupportTicket {
   constructor(obj) {
     this.id = obj.id;
     this.userId = obj.userId;
-    this.userId_status = obj.userId_status;
-    this.provider = obj.provider || 'cauterion';
+		this.userId_status = obj.userId_status;
+		this.operator_status = obj.operator_status;
+		this.provider = obj.provider || 'cauterion';
+		this.operator = obj.operator;
     this.type = obj.type; // package or test
     this.status = obj.status;
     this.image= obj.image;
     this.title = obj.title;
     this.text = obj.text;
-    this.messages = obj.messages; // Support ticket messages bitween support & user
+    this.messages = obj.messages; // Support ticket messages bitween operator & user
     this.updatedAt = obj.updatedAt;
     this.createdAt = obj.createdAt || Date.now();
   }
@@ -54,8 +57,10 @@ class SupportTicket {
     let model = {
       id: this.id,
       userId: this.userId,
-      userId_status: this.userId_status,
-      provider: this.provider,
+			userId_status: this.userId_status,
+			operator_status: this.operator_status,
+			provider: this.provider,
+			operator: this.operator,
       type: this.type,
       status: this.status,
       title: this.title,
@@ -72,7 +77,7 @@ class SupportTicket {
   async create() {
     this.id = uuid();
     this.updatedAt = Date.now();
-    this.status = TICKET_STATUS.PENDING;
+		this.status = TICKET_STATUS.PENDING;
     this.userId_status = `${this.userId}#${this.status}`;
     const supportTicketImage = this.image ? (await uploadFileInS3(this.userId, this.image, 'support')).url : null;
     if (supportTicketImage) {
@@ -100,9 +105,9 @@ class SupportTicket {
     return dynamoDbLib.call('query', params);
   }
 
-  static async getSupportTickets(data) {
+  static async getSupportTickets(data, user) {
     let response = {};
-    if (data.userId) { // For Users 
+    if (data.userId) { // For Users
       const items = (await getItemByGSIFull({
         TableName: table,
         IndexName: data.status ? 'userId_status-updatedAt-index' : 'userId-updatedAt-index',
@@ -114,7 +119,7 @@ class SupportTicket {
         Limit: data.limit || 20
       }));
       response = items;
-    } else { // For Admin
+    } else if (user.type === USER_TYPES.ADMIN) {
       const items = (await getItemByGSIFull({
         TableName: table,
         IndexName: data.status ? 'status-updatedAt-index' : 'provider-updatedAt-index',
@@ -125,7 +130,18 @@ class SupportTicket {
         Limit: data.limit || 20
       }));
       response = items;
-    }
+    } else if (user.type === USER_TYPES.OPERATOR) {
+			const items = (await getItemByGSIFull({
+        TableName: table,
+        IndexName: data.status ? 'operator_status-updatedAt-index' : 'status-updatedAt-index',
+        attribute: data.status ? 'operator_status': 'status',
+        value: data.status ? `${user.id}#${data.status}`: TICKET_STATUS.PENDING,
+        LastEvaluatedKey: data.LastEvaluatedKey || null,
+        ScanIndexForward: data.ScanIndexForward || true, // default => newest
+        Limit: data.limit || 20
+      }));
+      response = items;
+		}
     return response;
   }
 
@@ -133,7 +149,7 @@ class SupportTicket {
     const ticket = (await SupportTicket.getById(supportTicketId)).Items[0];
     if (!ticket) throw new Error('Ticket doesn\'t exist');
 
-    if (userType !== 'admin' && ticket.userId !== userId) throw new Error('Access denied');
+    if (![USER_TYPES.ADMIN, USER_TYPES.OPERATOR].includes(userType) && ticket.userId !== userId) throw new Error('Access denied');
 
     if (updatedData && updatedData.message) {
 			// Uploaded files limit (2)
@@ -141,18 +157,28 @@ class SupportTicket {
 				const filesOtd = [];
 				if (updatedData.message.files.length > 2) throw new Error('Upload limit is 2.');
 				for (const attachedFile of updatedData.message.files) {
-					const data = await uploadFileInS3(userId || 'admin', attachedFile.content, 'support', 'all');
+					const data = await uploadFileInS3(`${userId}_${userType}`, attachedFile.content, 'support', 'all');
 					filesOtd.push(data);
 				}
 				updatedData.message.files = filesOtd;
 			}
       const message = (new SupportMessage({ owner: userType, ...updatedData.message })).toModel();
-      ticket.messages.push(message);
-      ticket.status = userType === 'admin' ? TICKET_STATUS.REPLIED : TICKET_STATUS.PENDING;
+			ticket.messages.push(message);
+			if ([USER_TYPES.ADMIN, USER_TYPES.OPERATOR].includes(userType)) {
+				ticket.status = TICKET_STATUS.REPLIED;
+				ticket.operator = userId;
+				ticket.operator_status = `${userId}#${TICKET_STATUS.REPLIED}`;
+			} else {
+				ticket.status = TICKET_STATUS.PENDING;
+			}
 		}
 		
     if (updatedData.status && updatedData.status === TICKET_STATUS.CLOSED) ticket.status = TICKET_STATUS.CLOSED;
-    
+		
+		if (userType === USER_TYPES.USER) {
+			ticket.userId_status = `${userId}#${ticket.status}`;
+		}
+		
     const params = {
       TableName: table,
       Key: {
@@ -165,7 +191,7 @@ class SupportTicket {
       ReturnValues: 'ALL_NEW',
     };
     
-    ticket.userId_status = `${ticket.userId}#${ticket.status}`;
+    
     ticket.updatedAt = new Date().getTime();
     _.forEach(ticket, (item, key) => {
       if (!['id', 'userId', 'title', 'text', 'image', 'provider'].includes(key)) {

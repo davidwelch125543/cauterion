@@ -5,7 +5,7 @@ const { User } = require('../models/user.model');
 const bcrypt = require('bcryptjs');
 
 // User type => 'admin', 'user', 'operator'... etc.
-const loginValidationChain = (userType) => {
+const loginValidationChain = (adminRoles) => {
   return [
   body('password', 'Password is required').not().isEmpty(),
   body().custom(async (req) => {
@@ -26,7 +26,7 @@ const loginValidationChain = (userType) => {
 		}
 
 		// Check admin login Validation
-		if (userType && userFound && userFound.type !== userType) throw new Error('Access denined');
+		if (adminRoles && userFound && !adminRoles.includes(userFound.type)) throw new Error('Access denined');
 		if (!userFound || !userFound.active) {
 			throw new Error('A user with such email doesn\'t exist or is not active');
 		}

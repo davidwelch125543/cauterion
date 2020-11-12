@@ -166,7 +166,65 @@ class User {
     });
     const response = await dynamoDbLib.call('update', params);
     return response;
-  }
+	}
+	
+	async update() {
+    const updateItem = this.toModel();
+    const params = {
+      TableName: tableName,
+      Key: {
+        id: this.id,
+      },
+      ExpressionAttributeValues: {
+      },
+      ExpressionAttributeNames: {
+      },
+      ReturnValues: 'ALL_NEW',
+    };
+    
+    updateItem.updatedAt = new Date().getTime();
+    _.forEach(updateItem, (item, key) => {
+      if (!['id', 'email', 'password', 'type', 'method', 'createdAt'].includes(key)) {
+        const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
+        params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
+        params.ExpressionAttributeNames['#' + key] = key;
+        params.ExpressionAttributeValues[':' + key] = item;
+      }
+    });
+    const response = await dynamoDbLib.call('update', params);
+    return response;
+	}
+	
+	static async convertMemberToAccount(member) {
+		const _member = new User(member);
+		const updateItem = _member.toModel();
+		updateItem.type = USER_TYPES.USER;
+		updateItem.active = true;
+		updateItem.updatedAt = new Date().getTime();
+
+    const params = {
+      TableName: tableName,
+      Key: {
+        id: updateItem.id,
+      },
+      ExpressionAttributeValues: {
+      },
+      ExpressionAttributeNames: {
+      },
+      ReturnValues: 'ALL_NEW',
+    };
+    
+    _.forEach(updateItem, (item, key) => {
+      if (!['id', 'email', 'phone', 'owner', 'method', 'createdAt'].includes(key)) {
+        const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
+        params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
+        params.ExpressionAttributeNames['#' + key] = key;
+        params.ExpressionAttributeValues[':' + key] = item;
+      }
+    });
+    const response = await dynamoDbLib.call('update', params);
+    return response;
+	}
 
   static async changePassword(userId, newPassword) {
     const user = (await User.getUserById(userId)).Items[0];
@@ -195,7 +253,6 @@ class User {
     return response;
 	}
 	
-
   static async delete(id) {
     const user = (await this.getUserById(id)).Items[0];
     if (user.type === 'admin') throw new Error('Access denied');
@@ -331,7 +388,9 @@ class User {
       TableName: tableName,
       Item: operatorModel,
     };
-    return dynamoDbLib.call('put', params);
+		await dynamoDbLib.call('put', params);
+		delete operatorModel.password;
+		return operatorModel;
 	}
 
 	static async retrieveOperators() {
@@ -349,5 +408,6 @@ class User {
 
 module.exports = {
   User,
-  AUTH_TYPES,
+	AUTH_TYPES,
+	USER_TYPES
 };

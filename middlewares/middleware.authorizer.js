@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { User } = require('../models/user.model');
 
-function AuthorizerMiddleware(userType) {
+function AuthorizerMiddleware(userRoles) {
   return async (req, res, next) => {
     let defaultErrorMessage = 'Authorization failed';
     try {
@@ -10,12 +10,11 @@ function AuthorizerMiddleware(userType) {
       const userDetails = jwt.verify(token, process.env.SECRET_KEY);
       const user = (await User.getUserById(userDetails.id)).Items[0];
       if (!user) throw new Error(defaultErrorMessage);
-      if (userType && user.type !== userType) {
+      if (userRoles && !userRoles.includes(user.type)) {
         defaultErrorMessage = 'Access denied';
         throw new Error(defaultErrorMessage);
       }
       req.user = user;
-      console.log('User Details', userDetails);
       next();
     } catch (error) {
       res.status(401).send(defaultErrorMessage);

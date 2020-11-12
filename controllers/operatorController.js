@@ -20,7 +20,19 @@ const getOperatorsList = async (req, res) => {
   }
 }
 
+const deleteOperator = async (req, res) => {
+	try {
+		const { id } = req.params;
+		await User.delete(id);
+		res.status(200).send('Success');
+	} catch (error) {
+		console.log('Error occured in removing operator', error.message);
+    res.status(400).send({ error: error.message });
+	}
+}
+
 module.exports = {
 	createOperator,
 	getOperatorsList,
+	deleteOperator,
 };
