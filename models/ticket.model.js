@@ -143,6 +143,18 @@ class SupportTicket {
       response = items;
 		}
     return response;
+	}
+	static async getSupportTicketsByOperator(data, operatorId) {
+		const items = (await getItemByGSIFull({
+			TableName: table,
+			IndexName: data.status ? 'operator_status-updatedAt-index' : 'operator-updatedAt-index',
+			attribute: data.status ? 'operator_status': 'operator',
+			value: data.status ? `${operatorId}#${data.status}`: operatorId,
+			LastEvaluatedKey: data.LastEvaluatedKey || null,
+			ScanIndexForward: data.ScanIndexForward || true, // default => newest
+			Limit: data.limit || 20
+		}));
+		return items;
   }
 
   static async update(supportTicketId, userId, updatedData, userType) {

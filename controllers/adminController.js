@@ -26,7 +26,35 @@ const getTickets = async (req, res) => {
 			await Promise.all(tickets.Items.map(async (item) => {
 				const user = (await User.getUserById(item.userId)).Items[0];
 				if (user) {
-					item.user = _.pick(user, ['first_name', 'last_name', 'email', 'phone']);
+					item.user = _.pick(user, ['first_name', 'last_name', 'email', 'phone', 'type']);
+				}
+				if (item.operator) {
+					const operatorInfo = (await User.getUserById(item.operator)).Items[0];
+					if (operatorInfo) item.operatorInfo = _.pick(operatorInfo, ['first_name', 'last_name', 'email', 'phone', 'type']);
+				}
+			}));
+		}
+    res.status(200).send(tickets);
+  } catch (error) {
+    console.log('Get Tickets failed', error);
+    res.status(409).send(error);
+  }
+};
+
+const getTicketsByOperator = async (req, res) => {
+  try {
+		const { operatorId } = req.params;
+    const data = req.body;
+		const tickets = await SupportTicket.getSupportTicketsByOperator(data, operatorId);
+		if (tickets && Array.isArray(tickets.Items)) {
+			await Promise.all(tickets.Items.map(async (item) => {
+				const user = (await User.getUserById(item.userId)).Items[0];
+				if (user) {
+					item.user = _.pick(user, ['first_name', 'last_name', 'email', 'phone', 'type']);
+				}
+				const operatorInfo = (await User.getUserById(operatorId)).Items[0];
+				if (operatorInfo) {
+					tickets.operatorInfo = _.pick(operatorInfo, ['first_name', 'last_name', 'email', 'phone', 'type']);
 				}
 			}));
 		}
@@ -91,5 +119,6 @@ module.exports = {
   getTicketById,
   updateSupportTicket,
   getUsersList,
-  getUserInfo
+	getUserInfo,
+	getTicketsByOperator
 };

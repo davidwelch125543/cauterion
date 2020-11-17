@@ -22,9 +22,11 @@ router.put('/tickets/:id', AdminRolesMiddleware, adminController.updateSupportTi
 router.post('/users', OnlyAdminRoleAuth, adminController.getUsersList);
 router.get('/users/:id', OnlyAdminRoleAuth, adminController.getUserInfo);
 
+
 // Operators
 router.post('/operators', OnlyAdminRoleAuth, operatorController.createOperator);
 router.get('/operators', OnlyAdminRoleAuth, operatorController.getOperatorsList);
+router.post('/operators/grouped-tickets/:operatorId', OnlyAdminRoleAuth, adminController.getTicketsByOperator);
 router.delete('/operators/:id', OnlyAdminRoleAuth, operatorController.deleteOperator);
 
 module.exports = router;
