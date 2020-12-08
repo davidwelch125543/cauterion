@@ -1,6 +1,7 @@
 const { Test } = require('../models/test.model');
 const { SupportTicket } = require('../models/ticket.model');
 const { User } = require('../models/user.model');
+const { PackageQR } = require('../models/packageQr.model');
 
 exports.createSupportTicket = async (req, res) => {
   try {
@@ -51,6 +52,22 @@ exports.updateOwnTicket = async (req, res) => {
     console.log('Update support ticket failed', error);
     res.status(400).send(error);
   }
+}
+
+exports.checkPackageValidity = async (req, res) => {
+	try {
+		const { code } = req.query;
+		let qrCodes = await PackageQR.getCodes();
+		qrCodes = qrCodes.map(c => { return c.name.toLowerCase()}); 
+		const isValid = qrCodes.includes(code.toLowerCase());
+		if (!isValid) throw new Error('Package QR code is invalid');
+		res.status(200).send({ result: "Success" });
+	} catch (error) {
+		console.log('Failed in check package' , error.message);
+		res.status(409).send({
+			error: { message: error.message }
+		});
+	}
 }
 
 exports.getUserInfoFromQR = async (req, res) => {

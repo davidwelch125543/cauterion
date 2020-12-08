@@ -17,6 +17,7 @@ router.put('/tickets/:id', UserAuthorizerMiddleware, usersController.updateOwnTi
 router.post('/support-ticket', AuthorizerMiddleware(), usersController.createSupportTicket);
 
 // QR INFO
+router.get('/package/check', UserAuthorizerMiddleware, usersController.checkPackageValidity);
 router.get('/qr/:qrUserId', UserAuthorizerMiddleware, usersController.getUserInfoFromQR);
 
 module.exports = router;
