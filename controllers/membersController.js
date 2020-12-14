@@ -1,6 +1,7 @@
 const { User } = require('../models/user.model');
 const { Test } = require('../models/test.model');
 const { MailSenderManager } = require('../lib/ses-lib');
+const { PackageQR } = require('../models/packageQr.model');
 
 exports.createFamilyAccount = async (req, res) => {
   try {
@@ -58,12 +59,15 @@ exports.getMemberById = async (req, res) => {
 		const member = (await User.getUserById(memberId)).Items[0];
 		if (!member || member.owner !== userId) throw new Error('Invalid memberId');
 		
-		const tests = await Test.getTestsByUserId(memberId);
+		let tests = await Test.getTestsByUserId(memberId);
+		await Promise.all(tests.map(async (t, i) => {
+			const resData = await PackageQR.getByCode(t.type, t.result);
+			tests[i].result = resData;
+		}));
 
 		res.status(200).send({
 			result: { ...member, tests }
 		});
-		
   } catch (error) {
     console.log('Error occured: Add family account: ', error);
     res.status(400).send({ error: error.message });

@@ -3,15 +3,9 @@ const { getItemByGSIFull } = require('../lib/dynamo-requests');
 const _ = require('lodash');
 const uuid = require('uuid').v4;
 const { uploadFileInS3 } = require('../helpers/uploads');
+const { PackageQR } = require('./packageQr.model');
 
 const table = 'tests-dev';
-
-const TEST_RESULT_TYPES = Object.freeze({
-  0: 'No antibodies present',
-  1: 'IgG & IgM antibodies present',
-  2: 'IgG antibodies present',
-  3: 'IgM antibodies present'
-});
 
 class Test {
   constructor(obj) {
@@ -112,8 +106,10 @@ class Test {
       this.image = testImage;
       updatedItem.image = testImage;
     }
-    
-    if (this.result && !TEST_RESULT_TYPES[this.result]) throw new Error('Invalid test result case');
+		
+		const packageData = await PackageQR.getByCode(this.type);
+		const validPackageResult = packageData.results.find(r => r.id === this.result);
+		if (!packageData || !validPackageResult) throw new Error('Invalid test result case');
 
     _.forEach(updatedItem, (item, key) => {
       if (!['id', 'userId', 'type', 'serialNumber', 'createdAt'].includes(key)) {

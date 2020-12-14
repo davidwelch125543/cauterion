@@ -57,11 +57,9 @@ exports.updateOwnTicket = async (req, res) => {
 exports.checkPackageValidity = async (req, res) => {
 	try {
 		const { code } = req.query;
-		let qrCodes = await PackageQR.getCodes();
-		qrCodes = qrCodes.map(c => { return c.name.toLowerCase()}); 
-		const isValid = qrCodes.includes(code.toLowerCase());
-		if (!isValid) throw new Error('Package QR code is invalid');
-		res.status(200).send({ result: "Success" });
+		const packageData = await PackageQR.getByCode(code.toLowerCase());
+		if (!packageData) throw new Error('Package QR code is invalid');
+		res.status(200).send({ result: packageData });
 	} catch (error) {
 		console.log('Failed in check package' , error.message);
 		res.status(409).send({

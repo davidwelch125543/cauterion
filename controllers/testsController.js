@@ -1,10 +1,15 @@
 const { User } = require('../models/user.model');
 const { Test } = require('../models/test.model');
+const { PackageQR } = require('../models/packageQr.model');
 
 const getUserTests = async (req, res) => {
   try {
     const userId = req.user.id;
-    const tests = await Test.getTestsByUserId(userId);
+		let tests = await Test.getTestsByUserId(userId);
+		await Promise.all(tests.map(async (t, i) => {
+			const resData = await PackageQR.getByCode(t.type, t.result);
+			tests[i].result = resData;
+		}));
     res.status(200).send(tests);
   } catch (error) {
     console.log('GetUserTests failed with error: ', error);
@@ -16,7 +21,10 @@ const scanTest = async (req, res) => {
   try {
     const data = req.body;
     const user = req.user;
-	
+		
+		const packageInfo = await PackageQR.getByCode((data.type || 'null').toLowerCase());
+		if (!packageInfo) throw new Error('Invalid type provided');
+
 		if (data.memberId) {
 			const memberUser = (await User.getUserById(data.memberId)).Items[0];
 			if (!memberUser || memberUser.owner !== user.id) throw new Error('Invalid member id');
@@ -30,7 +38,7 @@ const scanTest = async (req, res) => {
     if (!test) {
       const newTest = new Test({
         userId: user.id,
-        type: data.type,
+        type: data.type.toLowerCase(),
         serialNumber: data.serialNumber
       });
       await newTest.create();
