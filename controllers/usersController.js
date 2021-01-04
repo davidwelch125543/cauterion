@@ -74,7 +74,14 @@ exports.getUserInfoFromQR = async (req, res) => {
 
 		const qrUserInfo = (await User.getUserById(qrUserId)).Items[0];
 		if (!qrUserInfo) throw new Error('Identyfing user process failed)');
+
 		const tests = await Test.getTestsByUserId(qrUserId);
+		for (const test of tests) {
+			const currentPackage = await PackageQR.getByCode(test.type);
+			test.result = currentPackage.results.find((r) => r.id === test.result);
+			if (test.result) test.result.type = currentPackage.type;	
+		}
+
     res.status(200).send({
 			result: {
 				...qrUserInfo,
