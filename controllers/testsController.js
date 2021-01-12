@@ -8,6 +8,8 @@ const getUserTests = async (req, res) => {
 		let tests = await Test.getTestsByUserId(userId);
 		await Promise.all(tests.map(async (t, i) => {
 			const resData = await PackageQR.getByCode(t.type, t.result);
+			const testedByUser =  (await User.getUserById(t.userId)).Items[0];
+			tests[i].testedBy = `${testedByUser.first_name} ${testedByUser.last_name}`;
 			tests[i].result = resData;
 		}));
     res.status(200).send(tests);

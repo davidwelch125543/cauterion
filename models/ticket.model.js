@@ -19,6 +19,7 @@ class SupportMessage {
     this.text = obj.text;
 		this.owner = obj.owner;
 		this.files = obj.files;
+		this.seen = obj.seen;
     this.createdAt = obj.createdAt
   }
 
@@ -29,8 +30,9 @@ class SupportMessage {
       text: this.text,
 			owner: this.owner,
 			files: this.files,
+			seen: this.seen || 0,
       createdAt: this.createdAt || Date.now()
-    }
+    };
     return model;
   }
 }
@@ -203,10 +205,36 @@ class SupportTicket {
       ReturnValues: 'ALL_NEW',
     };
     
-    
-    ticket.updatedAt = new Date().getTime();
+ 
+    return ticket;
+	}
+	
+	static async messageSeen(user, ticketId) {
+		const ticket = (await SupportTicket.getById(ticketId)).Items[0];
+    if (!ticket) throw new Error('Ticket doesn\'t exist');
+		
+		if ((user.type === USER_TYPES.OPERATOR && user.id !== ticket.operator) || (user.type === USER_TYPES.USER && user.id !== ticket.userId)) throw new Error('Access denied');
+		
+		ticket.messages = ticket.messages.map(msg => {
+			if ((user.type === USER_TYPES.OPERATOR && msg.owner === USER_TYPES.USER) || (user.type === USER_TYPES.USER && msg.owner === USER_TYPES.OPERATOR)) msg.seen = 1;
+			return msg;
+		});
+
+		const params = {
+      TableName: table,
+      Key: {
+        id: ticket.id,
+      },
+      ExpressionAttributeValues: {
+      },
+      ExpressionAttributeNames: {
+      },
+      ReturnValues: 'ALL_NEW',
+		};
+
+		ticket.updatedAt = new Date().getTime();
     _.forEach(ticket, (item, key) => {
-      if (!['id', 'userId', 'title', 'text', 'image', 'provider'].includes(key)) {
+      if (['messages', 'updatedAt'].includes(key)) {
         const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
         params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
         params.ExpressionAttributeNames['#' + key] = key;
@@ -214,10 +242,10 @@ class SupportTicket {
       }
     });
     await dynamoDbLib.call('update', params);
-    return ticket;
-  }
-}
+	}
+};
 
 module.exports = {
-  SupportTicket
+	SupportTicket,
+	TICKET_STATUS,
 };

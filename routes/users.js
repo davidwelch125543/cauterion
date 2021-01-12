@@ -3,7 +3,10 @@ const router = express.Router();
 const { AuthorizerMiddleware } = require('../middlewares/middleware.authorizer');
 const usersController = require('../controllers/usersController');
 const testsController = require('../controllers/testsController');
+const { USER_TYPES } = require('../models/user.model');
+
 const UserAuthorizerMiddleware = AuthorizerMiddleware();
+const UserOpAuth = AuthorizerMiddleware([USER_TYPES.USER, USER_TYPES.OPERATOR]);
 
 // Tests
 router.get('/tests', UserAuthorizerMiddleware, testsController.getUserTests);
@@ -19,5 +22,8 @@ router.post('/support-ticket', AuthorizerMiddleware(), usersController.createSup
 // QR INFO
 router.get('/package/check', UserAuthorizerMiddleware, usersController.checkPackageValidity);
 router.get('/qr/:qrUserId', UserAuthorizerMiddleware, usersController.getUserInfoFromQR);
+
+router.get('/notifications', UserOpAuth, usersController.getNotificationsInfo);
+router.get('/notifications/seen/:ticketId', UserOpAuth, usersController.updateNotifications);
 
 module.exports = router;

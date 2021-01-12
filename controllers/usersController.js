@@ -1,6 +1,6 @@
 const { Test } = require('../models/test.model');
-const { SupportTicket } = require('../models/ticket.model');
-const { User } = require('../models/user.model');
+const { SupportTicket, TICKET_STATUS } = require('../models/ticket.model');
+const { User, USER_TYPES } = require('../models/user.model');
 const { PackageQR } = require('../models/packageQr.model');
 
 exports.createSupportTicket = async (req, res) => {
@@ -36,8 +36,8 @@ exports.getTicketById = async (req, res) => {
     if (ticket.userId !== userId) throw new Error('Access denied');
     res.status(200).send(ticket);
   } catch (error) {
-   console.log('Get ticket by Id failed', error);
-   res.status(409).send(error);
+  	console.log('Get ticket by Id failed', error);
+  	res.status(409).send(error);
   }
 }
 
@@ -93,3 +93,49 @@ exports.getUserInfoFromQR = async (req, res) => {
     res.status(400).send(error);
   }
 }
+
+exports.getNotificationsInfo = async (req, res) => {
+	try {
+		const user = req.user;
+		const ticketWithUnseenMessages = [];
+		if (user.type === USER_TYPES.OPERATOR) {
+			const operatorSupTickets = (await SupportTicket.getSupportTickets({
+				status: TICKET_STATUS.PENDING, limit: 100 },
+				{ id: user.id, type: USER_TYPES.OPERATOR })).Items;
+
+			for (const supTicket of operatorSupTickets) {
+				const unseenMessages = supTicket.messages.filter(msg => msg.seen === 0 && msg.owner === USER_TYPES.USER);
+				if (unseenMessages && unseenMessages.length > 0) {
+					supTicket.messages = unseenMessages;
+					supTicket.unseenMessages = unseenMessages.length;
+					ticketWithUnseenMessages.push(supTicket);
+				}
+			}
+		} else if (user.type === USER_TYPES.USER) {
+			const userSupportTickets = (await SupportTicket.getSupportTickets({ userId: user.id, status: TICKET_STATUS.REPLIED, limit: 100 })).Items;
+			for (const supTicket of userSupportTickets) {
+				const unseenMessages = supTicket.messages.filter(msg => msg.seen === 0 && msg.owner === USER_TYPES.OPERATOR);
+				if (unseenMessages && unseenMessages.length > 0) {
+					supTicket.messages = unseenMessages;
+					supTicket.unseenMessages = unseenMessages.length;
+					ticketWithUnseenMessages.push(supTicket); 
+				}
+			}
+		}
+		res.status(200).send({ notifications: ticketWithUnseenMessages });
+	} catch (error) {
+		console.log('Failed to load notifications', error);
+		res.status(409).send({ error: { message: error.message }});
+	}
+};
+
+exports.updateNotifications = async (req, res) => {
+	try {
+		const { ticketId } = req.params;
+		await SupportTicket.messageSeen(req.user, ticketId);
+		res.status(200).send({ result: 'Success' });
+	} catch (error) {
+		console.log('Failed to update notifications');
+		res.status(409).send({ error: error.message });
+	}
+};
