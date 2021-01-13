@@ -204,8 +204,17 @@ class SupportTicket {
       },
       ReturnValues: 'ALL_NEW',
     };
-    
- 
+		
+		ticket.updatedAt = new Date().getTime();
+    _.forEach(ticket, (item, key) => {
+      if (!['id', 'userId', 'title', 'text', 'image', 'provider'].includes(key)) {
+				const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
+        params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
+        params.ExpressionAttributeNames['#' + key] = key;
+        params.ExpressionAttributeValues[':' + key] = item;
+			};
+		});
+    await dynamoDbLib.call('update', params);
     return ticket;
 	}
 	

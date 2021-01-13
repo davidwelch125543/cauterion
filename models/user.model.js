@@ -215,7 +215,7 @@ class User {
     };
     
     _.forEach(updateItem, (item, key) => {
-      if (!['id', 'email', 'phone', 'owner', 'method', 'createdAt'].includes(key)) {
+      if (!['id', 'phone', 'owner', 'method', 'createdAt'].includes(key)) {
         const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
         params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
         params.ExpressionAttributeNames['#' + key] = key;
@@ -268,27 +268,26 @@ class User {
 	//#endregion
 	
 	// #region MEMBERS --------------------------------------------------------------------------
-	static async memberBodyValidator(data, actionType = 'create') { // actionType => 'create', 'update'
+	static async memberBodyValidator(data) {
 		const body = _.pick(data, ['email', 'first_name', 'last_name', 'nationalId', 'nationality', 'phone', 'gender', 'birthday', 'avatar']);
-		const isValidMobile = validator.isMobilePhone(body.phone || '');
-		const isValidEmail = validator.isEmail(body.email || '');
 
-		if (actionType === 'create') {
-			if (!isValidMobile || !isValidEmail || !body.nationalId) throw new Error('Invalid email/password or missing nationalId');
-	
-			const emailMatchUser = await this.getUserByEmail(body.email);
-			const phoneMatchUser = await this.getUserByPhoneNumber(body.phone);
-	
-			if (emailMatchUser || phoneMatchUser) throw new Error('User with provided email/phone already exists');
-		} else if (actionType === 'update') {
-			let phoneMatchUser, emailMatchUser = null;
-			if ((body.phone && !isValidMobile) || (body.email && !isValidEmail)) throw new Error('Invalid email/password');
-			
-			if (body.phone) phoneMatchUser = await this.getUserByPhoneNumber(body.phone);
-			if (body.email) emailMatchUser = await this.getUserByEmail(body.email);
-
-			if (phoneMatchUser || emailMatchUser) throw new Error('User with provided email/phone already exists');
+		let phoneMatchUser = null;
+		let emailMatchUser = null;
+		let emailPhoneInvalidError = '';
+		if (body.phone) {
+			const isValidMobile = validator.isMobilePhone(body.phone);
+			if (isValidMobile) phoneMatchUser = await this.getUserByPhoneNumber(body.phone);
+			else emailPhoneInvalidError.concat('\nInvalid phone number');
 		}
+
+		if (body.email) {
+			const isValidEmail = validator.isEmail(body.email);
+			if (isValidEmail) emailMatchUser = await this.getUserByEmail(body.email); 
+			else emailPhoneInvalidError.concat('\nInvalid email address');
+		}
+
+		if (emailMatchUser || phoneMatchUser) throw new Error('User with provided email/phone already exists');
+		if (emailPhoneInvalidError !== '') throw new Error(`${emailPhoneInvalidError}`);
 		return body;
 	}
 

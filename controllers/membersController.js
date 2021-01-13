@@ -23,7 +23,7 @@ exports.updateMember = async (req, res) => {
 	try {
 		const { id: userId } = req.user;
 		const { memberId } = req.params;
-		const data = await User.memberBodyValidator(req.body, 'update');
+		const data = await User.memberBodyValidator(req.body);
 
 		const currentUser = new User(data);
 		const member = await currentUser.updateMember(userId, memberId);
@@ -77,9 +77,16 @@ exports.getMemberById = async (req, res) => {
 exports.requestForStandaloneAccount = async (req, res) => {
 	try {
 		const { id: userId } = req.user;
-		const { memberId } = req.params;
+		const { memberId, email } = req.body;
 		const member = (await User.getUserById(memberId)).Items[0];
 		if (!member || member.owner !== userId) throw new Error('Invalid memberId');
+		if (!member.email && !email) throw new Error('Provide email address');
+		member.email = member.email || email;
+
+		// Check email availability
+		const validUser = await User.getUserByEmail(member.email);
+		if (!validUser) throw new Error('User with provided email already exists');
+
 		await MailSenderManager.convertToStandaloneAccount(member.email);
 		await User.convertMemberToAccount(member);
 		res.status(200).send('Success');

@@ -10,6 +10,6 @@ router.get('/', UserAuthorizerMiddleware, membersController.getMembersList);
 router.get('/:memberId', UserAuthorizerMiddleware, membersController.getMemberById);
 router.put('/:memberId', UserAuthorizerMiddleware, membersController.updateMember);
 
-router.post('/account-request/:memberId', UserAuthorizerMiddleware, membersController.requestForStandaloneAccount);
+router.post('/account-request', UserAuthorizerMiddleware, membersController.requestForStandaloneAccount);
 
 module.exports = router;
