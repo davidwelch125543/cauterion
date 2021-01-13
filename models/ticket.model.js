@@ -184,13 +184,14 @@ class SupportTicket {
 				ticket.operator_status = `${userId}#${TICKET_STATUS.REPLIED}`;
 			} else {
 				ticket.status = TICKET_STATUS.PENDING;
+				ticket.userId_status = `${userId}#${ticket.status}`;
 			}
 		}
 		
-    if (updatedData.status && updatedData.status === TICKET_STATUS.CLOSED) ticket.status = TICKET_STATUS.CLOSED;
-		
-		if (userType === USER_TYPES.USER) {
-			ticket.userId_status = `${userId}#${ticket.status}`;
+    if (updatedData.status && updatedData.status === TICKET_STATUS.CLOSED) {
+			ticket.status = TICKET_STATUS.CLOSED;
+			ticket.userId_status = TICKET_STATUS.CLOSED;
+			ticket.operator_status = TICKET_STATUS.CLOSED;
 		}
 		
     const params = {
