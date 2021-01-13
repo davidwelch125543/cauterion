@@ -182,9 +182,11 @@ class SupportTicket {
 				ticket.status = TICKET_STATUS.REPLIED;
 				ticket.operator = userId;
 				ticket.operator_status = `${userId}#${TICKET_STATUS.REPLIED}`;
+				ticket.userId_status = `${ticket.userId}#${TICKET_STATUS.REPLIED}`;
 			} else {
 				ticket.status = TICKET_STATUS.PENDING;
 				ticket.userId_status = `${userId}#${ticket.status}`;
+				ticket.operator_status = `${ticket.operator}#${ticket.status}`;
 			}
 		}
 		
