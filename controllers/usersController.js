@@ -1,5 +1,6 @@
 const { Test } = require('../models/test.model');
 const { SupportTicket, TICKET_STATUS } = require('../models/ticket.model');
+const _ = require('lodash');
 const { User, USER_TYPES } = require('../models/user.model');
 const { PackageQR } = require('../models/packageQr.model');
 
@@ -114,10 +115,12 @@ exports.getNotificationsInfo = async (req, res) => {
 		} else if (user.type === USER_TYPES.USER) {
 			const userSupportTickets = (await SupportTicket.getSupportTickets({ userId: user.id, status: TICKET_STATUS.REPLIED, limit: 100 })).Items;
 			for (const supTicket of userSupportTickets) {
+
 				const unseenMessages = supTicket.messages.filter(msg => msg.seen === 0 && msg.owner === USER_TYPES.OPERATOR);
 				if (unseenMessages && unseenMessages.length > 0) {
-					supTicket.messages = unseenMessages;
 					supTicket.unseenMessages = unseenMessages.length;
+					const supTicketOwner = (await User.getUserById(supTicket.userId)).Items[0];
+					supTicket.user = _.pick(supTicketOwner, ['first_name', 'last_name', 'email', 'phone', 'type']);
 					ticketWithUnseenMessages.push(supTicket); 
 				}
 			}
