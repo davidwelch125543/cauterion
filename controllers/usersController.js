@@ -107,8 +107,9 @@ exports.getNotificationsInfo = async (req, res) => {
 			for (const supTicket of operatorSupTickets) {
 				const unseenMessages = supTicket.messages.filter(msg => msg.seen === 0 && msg.owner === USER_TYPES.USER);
 				if (unseenMessages && unseenMessages.length > 0) {
-					supTicket.messages = unseenMessages;
 					supTicket.unseenMessages = unseenMessages.length;
+					const supTicketOwner = (await User.getUserById(supTicket.userId)).Items[0];
+					supTicket.user = _.pick(supTicketOwner, ['first_name', 'last_name', 'email', 'phone', 'type']);
 					ticketWithUnseenMessages.push(supTicket);
 				}
 			}
@@ -119,8 +120,9 @@ exports.getNotificationsInfo = async (req, res) => {
 				const unseenMessages = supTicket.messages.filter(msg => msg.seen === 0 && msg.owner === USER_TYPES.OPERATOR);
 				if (unseenMessages && unseenMessages.length > 0) {
 					supTicket.unseenMessages = unseenMessages.length;
-					const supTicketOwner = (await User.getUserById(supTicket.userId)).Items[0];
-					supTicket.user = _.pick(supTicketOwner, ['first_name', 'last_name', 'email', 'phone', 'type']);
+					supTicket.messages = unseenMessages;
+					// const supTicketOwner = (await User.getUserById(supTicket.userId)).Items[0];
+					// supTicket.user = _.pick(supTicketOwner, ['first_name', 'last_name', 'email', 'phone', 'type']);
 					ticketWithUnseenMessages.push(supTicket); 
 				}
 			}
