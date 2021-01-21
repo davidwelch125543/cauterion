@@ -1,5 +1,6 @@
 const { SupportTicket } = require('../models/ticket.model');
-const { User, USER_TYPES } = require('../models/user.model')
+const { User, USER_TYPES } = require('../models/user.model');
+const { Test } = require('../models/test.model');
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
 
@@ -15,6 +16,30 @@ const adminLogin = async (req, res) => {
     console.log('Login failed', error);
     res.status(400).send({ error: error.message });
   }
+};
+
+const updateUserData = async (req, res) => {
+	try {
+		const operator = req.user;
+		const { userUpdate, testUpdate } = req.body;
+		if (!operator.operatorWrAccess) throw new Error('Operator has not write access to modify user data');
+
+		// Update user info by operator
+		if (userUpdate && userUpdate.userId) {
+			const user = (await User.getUserById(userUpdate.userId)).Items[0];
+			if (![USER_TYPES.MEMBER, USER_TYPES.USER].includes(user.type)) throw new Error('Access denied, can\'t update operators');
+		  await User.updateByOperator(userUpdate);
+		}
+
+		if (testUpdate && testUpdate.testId) {
+			const currentTest = (await Test.getTestById(testUpdate.testId)).Items[0];
+			await Test.updateResultByOperator(currentTest, testUpdate.result);
+		}
+		res.status(200).send('Success');
+	} catch (error) {
+		console.log('Failed to update user data', error);
+		res.status(409).send({ error: error.message });
+	}
 };
 
 const getTickets = async (req, res) => {
@@ -89,7 +114,7 @@ const updateSupportTicket = async (req, res) => {
     console.log('Update support ticket failed', error);
     res.status(400).send(error);
   }
-}
+};
 
 const getUsersList = async (req, res) => {
   try {
@@ -100,7 +125,7 @@ const getUsersList = async (req, res) => {
     console.log('Get users list failed', error);
     res.status(409).send(error);
   }
-}
+};
 
 const getUserInfo = async (req, res) => {
   try {
@@ -111,7 +136,7 @@ const getUserInfo = async (req, res) => {
     console.log('Get user info failed', error);
     res.status(409).send(error);
   }
-}
+};
 
 module.exports = {
   adminLogin,
@@ -120,5 +145,6 @@ module.exports = {
   updateSupportTicket,
   getUsersList,
 	getUserInfo,
-	getTicketsByOperator
+	getTicketsByOperator,
+	updateUserData
 };

@@ -23,10 +23,14 @@ router.post('/users', OnlyAdminRoleAuth, adminController.getUsersList);
 router.get('/users/:id', OnlyAdminRoleAuth, adminController.getUserInfo);
 
 
-// Operators
+// Operators (admin)
 router.post('/operators', OnlyAdminRoleAuth, operatorController.createOperator);
 router.get('/operators', OnlyAdminRoleAuth, operatorController.getOperatorsList);
 router.post('/operators/grouped-tickets/:operatorId', OnlyAdminRoleAuth, adminController.getTicketsByOperator);
 router.delete('/operators/:id', OnlyAdminRoleAuth, operatorController.deleteOperator);
+router.put('/operators', OnlyAdminRoleAuth, operatorController.updateOperator);
+
+// Operator actions
+router.put('/by-operator', AdminRolesMiddleware, adminController.updateUserData);
 
 module.exports = router;

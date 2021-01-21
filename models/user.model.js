@@ -32,6 +32,7 @@ class User {
     this.resetPasswordCode = obj.resetPasswordCode;
 		this.active = obj.active;
 		this.owner = obj.owner;
+		this.operatorWrAccess = obj.operatorWrAccess;
     this.type = obj.type;
     this.first_name = obj.first_name;
     this.last_name = obj.last_name;
@@ -55,6 +56,7 @@ class User {
      resetPasswordCode: this.resetPasswordCode,
 		 active: this.active,
 		 owner: this.owner,
+		 operatorWrAccess: this.operatorWrAccess,
      type: this.type,
      first_name: this.first_name,
      last_name: this.last_name,
@@ -365,7 +367,7 @@ class User {
 	
 	// #region OPERATORS ------------------------------------------------------------------------
 	static async registerOperator(body) {
-		const data = _.pick(body, ['first_name', 'last_name', 'email']);
+		const data = _.pick(body, ['first_name', 'last_name', 'email', 'operatorWrAccess']);
 		if (!validator.isEmail(data.email)) throw new Error('Email is not valid');
 		const exUser = await this.getUserByEmail(data.email);
 		if (exUser) throw new Error('Email already exists in system');
@@ -401,6 +403,60 @@ class User {
 			ScanIndexForward: true
 		})).Items;
 		return operators;
+	}
+
+	static async updateByOperator(updateItem) {
+    const params = {
+      TableName: tableName,
+      Key: {
+        id: updateItem.userId,
+      },
+      ExpressionAttributeValues: {
+      },
+      ExpressionAttributeNames: {
+      },
+      ReturnValues: 'ALL_NEW',
+		};
+		delete updateItem.userId
+    
+    updateItem.updatedAt = new Date().getTime();
+    _.forEach(updateItem, (item, key) => {
+      if (['first_name', 'last_name', 'phone', 'nationality', 'birthday', 'updatedAt'].includes(key)) {
+        const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
+        params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
+        params.ExpressionAttributeNames['#' + key] = key;
+        params.ExpressionAttributeValues[':' + key] = item;
+      }
+    });
+    const response = await dynamoDbLib.call('update', params);
+    return response;
+	}
+
+	static async updateOperatorByAdmin(updateItem) {
+    const params = {
+      TableName: tableName,
+      Key: {
+        id: updateItem.operatorId,
+      },
+      ExpressionAttributeValues: {
+      },
+      ExpressionAttributeNames: {
+      },
+      ReturnValues: 'ALL_NEW',
+		};
+		delete updateItem.operatorId
+    
+    updateItem.updatedAt = new Date().getTime();
+    _.forEach(updateItem, (item, key) => {
+      if (['first_name', 'last_name', 'active', 'operatorWrAccess', 'updatedAt'].includes(key)) {
+        const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
+        params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
+        params.ExpressionAttributeNames['#' + key] = key;
+        params.ExpressionAttributeValues[':' + key] = item;
+      }
+    });
+    const response = await dynamoDbLib.call('update', params);
+    return response;
 	}
 	//#endregion 
 }

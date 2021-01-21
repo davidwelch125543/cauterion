@@ -31,8 +31,20 @@ const deleteOperator = async (req, res) => {
 	}
 }
 
+const updateOperator = async (req, res) => {
+	try {
+		const data = req.body;
+		await User.updateOperatorByAdmin(data);
+		res.status(200).send('Success');
+	} catch (error) {
+		console.log('Error', error);
+		res.status(409).send({ error: error.message });
+	}
+};
+
 module.exports = {
 	createOperator,
 	getOperatorsList,
 	deleteOperator,
+	updateOperator,
 };

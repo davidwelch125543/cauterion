@@ -121,6 +121,39 @@ class Test {
     });
     const response = await dynamoDbLib.call('update', params);
     return response;
+	}
+	
+	static async updateResultByOperator(currentTest, result) {
+		const updatedItem = {
+			result,
+			updatedAt: Date.now()
+		};
+    const params = {
+      TableName: table,
+      Key: {
+        id: currentTest.id,
+      },
+      ExpressionAttributeValues: {
+      },
+      ExpressionAttributeNames: {
+      },
+      ReturnValues: 'ALL_NEW',
+		};
+		
+		const packageData = await PackageQR.getByCode(currentTest.type);
+		const validPackageResult = packageData.results.find(r => r.id === result);
+		if (!packageData || !validPackageResult) throw new Error('Invalid test result case');
+
+    _.forEach(updatedItem, (item, key) => {
+      if (['result', 'updatedAt'].includes(key)) {
+        const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
+        params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
+        params.ExpressionAttributeNames['#' + key] = key;
+        params.ExpressionAttributeValues[':' + key] = item;
+      }
+    });
+    const response = await dynamoDbLib.call('update', params);
+    return response;
   }
 }
 
