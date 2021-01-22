@@ -3,6 +3,7 @@ const { User, USER_TYPES } = require('../models/user.model');
 const { Test } = require('../models/test.model');
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
+const { PackageQR } = require('../models/packageQr.model');
 
 const adminLogin = async (req, res) => {
   try {
@@ -99,9 +100,9 @@ const getTicketById = async (req, res) => {
     res.status(200).send(ticket);
   } catch (error) {
    console.log('Get ticket by Id failed', error);
-   res.status(409).send(error);
+	 res.status(409).send({ error: error.message });
   }
-}
+};
 
 const updateSupportTicket = async (req, res) => {
   try {
@@ -127,6 +128,41 @@ const getUsersList = async (req, res) => {
   }
 };
 
+const getActiveUsers = async (req, res) => {
+	try {
+		debugger;
+		const operatorId = req.user.id;
+		const operatorPendingTickets = (await SupportTicket.getSupportTicketsByOperator({ status: 'pending', limit: 1000 }, operatorId)).Items;
+		const operatorRepliedTickets = (await SupportTicket.getSupportTicketsByOperator({ status: 'replied', limit: 1000 }, operatorId)).Items;
+		const operatorAllTickets = [...operatorPendingTickets, ...operatorRepliedTickets];
+		let groupedTickets = _.groupBy(operatorAllTickets, (ot) => ot.userId);
+
+		let result = await Promise.all(Object.keys(groupedTickets).map(async (userId) => {
+			let userInfo = (await User.getUserById(userId)).Items[0];
+			delete userInfo.password;
+			delete userInfo.code;
+			delete userInfo.resetPasswordCode;
+
+			let tests = (await Test.getTestsByUserId(userId)) || [];
+			for (let i = 0; i < tests.length; i++) {
+				if (tests[i].result && tests[i].type) {
+					tests[i].result = (await PackageQR.getByCode(tests[i].type, tests[i].result)).result;
+				}
+			}
+			const members = (await User.retrieveMembers(userId)).Items;
+			return {
+				...userInfo,
+				tests,
+				members,
+			};
+		}));
+		res.status(200).send(result);
+	} catch (error) {
+		console.log('Error occured in getting active users');
+		res.status(409).send({ error: error.message });
+	}
+};
+
 const getUserInfo = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -143,8 +179,9 @@ module.exports = {
   getTickets,
   getTicketById,
   updateSupportTicket,
-  getUsersList,
+	getUsersList,
+	getActiveUsers,
 	getUserInfo,
 	getTicketsByOperator,
-	updateUserData
+	updateUserData,
 };

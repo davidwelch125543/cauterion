@@ -176,7 +176,7 @@ exports.googleOAuth = async (req, res) => {
   } catch (error) {
       res.status(401).send({ error: error.message });
   }
-}
+};
 
 exports.googleSignIn = async (req, res) => {
   try {

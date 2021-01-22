@@ -32,5 +32,6 @@ router.put('/operators', OnlyAdminRoleAuth, operatorController.updateOperator);
 
 // Operator actions
 router.put('/by-operator', AdminRolesMiddleware, adminController.updateUserData);
+router.get('/cp-operators/active-users', AdminRolesMiddleware, adminController.getActiveUsers);
 
 module.exports = router;
