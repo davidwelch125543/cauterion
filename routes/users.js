@@ -20,7 +20,7 @@ router.put('/tickets/:id', UserAuthorizerMiddleware, usersController.updateOwnTi
 router.post('/support-ticket', AuthorizerMiddleware(), usersController.createSupportTicket);
 
 // QR INFO
-router.get('/package/check', UserAuthorizerMiddleware, usersController.checkPackageValidity);
+router.get('/package/check', AuthorizerMiddleware([USER_TYPES.USER, USER_TYPES.OPERATOR, USER_TYPES.ADMIN]), usersController.checkPackageValidity);
 router.get('/qr/:qrUserId', UserAuthorizerMiddleware, usersController.getUserInfoFromQR);
 
 router.get('/notifications', UserOpAuth, usersController.getNotificationsInfo);
