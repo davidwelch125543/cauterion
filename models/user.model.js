@@ -318,8 +318,14 @@ class User {
 
 	async updateMember(userId, memberId) {
 		const member = this.toModel();
+		const userData = (await User.getUserById(userId)).Items[0];
 		const exMember = (await User.getUserById(memberId)).Items[0];
-		if (!exMember || exMember.owner !== userId) throw new Error('Invalid request');
+		
+		if (exMember && userData.type === USER_TYPES.OPERATOR) {
+			console.log('Member update by operator');
+		} else if (!exMember || exMember.owner !== userId) {
+			throw new Error('User has not access to update member.');
+		}
 
     const params = {
       TableName: tableName,

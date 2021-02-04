@@ -36,6 +36,7 @@ const updateUserData = async (req, res) => {
 			const currentTest = (await Test.getTestById(testUpdate.testId)).Items[0];
 			await Test.updateResultByOperator(currentTest, testUpdate.result);
 		}
+
 		res.status(200).send('Success');
 	} catch (error) {
 		console.log('Failed to update user data', error);
@@ -150,6 +151,17 @@ const getActiveUsers = async (req, res) => {
 				}
 			}
 			const members = (await User.retrieveMembers(userId)).Items;
+			
+			await Promise.all(members.map(async (mem, memInd) => {
+				debugger;
+				let memberTests = await Test.getTestsByUserId(mem.id);
+				await Promise.all(memberTests.map(async (t, i) => {
+					const resData = await PackageQR.getByCode(t.type, t.result);
+					memberTests[i].result = resData;
+				}));
+				members[memInd].tests = memberTests;
+			}));
+
 			return {
 				...userInfo,
 				tests,
