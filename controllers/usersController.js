@@ -17,6 +17,23 @@ exports.createSupportTicket = async (req, res) => {
   }
 };
 
+exports.createHealthInfoTicket = async (req, res) => {
+	try {
+		const userId = req.user.id;
+		const healthInfoImagesBuffers = [];
+		req.files.forEach(file => {
+			if (file.fieldname === 'healthInfoImages') healthInfoImagesBuffers.push(file.buffer);
+		});
+    const data = req.body;
+    const supportTicket = new SupportTicket({ userId, ...data, type: 'healthInfo', healthInfoImages: healthInfoImagesBuffers });
+    await supportTicket.create();
+    res.status(200).send(supportTicket.toModel());
+	} catch (error) {
+		console.log('Failed in creating health ticket', error);
+    res.status(409).send(error);
+	}
+};
+
 exports.getUserTickets = async (req, res) => {
   try {
     const userId = req.user.id;

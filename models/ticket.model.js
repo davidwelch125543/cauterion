@@ -45,9 +45,10 @@ class SupportTicket {
 		this.operator_status = obj.operator_status;
 		this.provider = obj.provider || 'cauterion';
 		this.operator = obj.operator;
-    this.type = obj.type; // package or test
+    this.type = obj.type; // package / test / healthInfo
     this.status = obj.status;
     this.image= obj.image;
+		this.healthInfoImages = obj.healthInfoImages;
     this.title = obj.title;
     this.text = obj.text;
     this.messages = obj.messages; // Support ticket messages bitween operator & user
@@ -69,6 +70,7 @@ class SupportTicket {
       text: this.text,
       messages: this.messages || [],
       image: this.image,
+			healthInfoImages: this.healthInfoImages || [],
       updatedAt: this.updatedAt,
       createdAt: this.createdAt
     };
@@ -81,6 +83,15 @@ class SupportTicket {
     this.updatedAt = Date.now();
 		this.status = TICKET_STATUS.PENDING;
     this.userId_status = `${this.userId}#${this.status}`;
+		const uploadedHealthImages = [];
+		if (Array.isArray(this.healthInfoImages) && this.healthInfoImages.length > 0) {
+			await Promise.all(this.healthInfoImages.map(async (img) => {
+				const healthTicket = (await uploadFileInS3(this.userId, img, 'healthInfo')).url;
+				if (healthTicket) uploadedHealthImages.push({ id: uuid(), url: healthTicket });
+			}));
+		}
+		
+		this.healthInfoImages = uploadedHealthImages;
     const supportTicketImage = this.image ? (await uploadFileInS3(this.userId, this.image, 'support')).url : null;
     if (supportTicketImage) {
       this.image = supportTicketImage;
@@ -146,6 +157,7 @@ class SupportTicket {
 		}
     return response;
 	}
+
 	static async getSupportTicketsByOperator(data, operatorId) {
 		const items = (await getItemByGSIFull({
 			TableName: table,

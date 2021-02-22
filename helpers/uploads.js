@@ -13,7 +13,11 @@ const uploadFileInS3 = async (userId, fileBase64, type, fileFormat = 'image') =>
 		allowedTypes.push('pdf');
 	}
 
-	const fileBuffer = Buffer.from(fileBase64.replace(/^data:image\/\w+;base64,/, '').replace(/^data:application\/pdf;base64,/, ''), 'base64');
+	let fileBuffer = fileBase64;
+	if (!Buffer.isBuffer(fileBase64)) {
+		fileBuffer = Buffer.from(fileBase64.replace(/^data:image\/\w+;base64,/, '').replace(/^data:application\/pdf;base64,/, ''), 'base64');
+	}
+	
   const fileInfo = fileType(fileBuffer);
 	if (!allowedTypes.includes(fileInfo.ext)) throw new Error('Invalid file extenstion');
 	
