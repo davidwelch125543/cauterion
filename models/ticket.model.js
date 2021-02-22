@@ -86,8 +86,8 @@ class SupportTicket {
 		const uploadedHealthImages = [];
 		if (Array.isArray(this.healthInfoImages) && this.healthInfoImages.length > 0) {
 			await Promise.all(this.healthInfoImages.map(async (img) => {
-				const healthTicket = (await uploadFileInS3(this.userId, img, 'healthInfo', 'all')).url;
-				if (healthTicket) uploadedHealthImages.push({ id: uuid(), url: healthTicket });
+				const healthTicket = (await uploadFileInS3(this.userId, img, 'healthInfo', 'all'));
+				if (healthTicket) uploadedHealthImages.push({ id: uuid(), ...healthTicket });
 			}));
 		}
 		
