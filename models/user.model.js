@@ -42,6 +42,7 @@ class User {
     this.nationalId = obj.nationalId;
     this.birthday = obj.birthday;
 		this.nationality = obj.nationality;
+		this.healthInfo = obj.healthInfo;
     this.createdAt = obj.createdAt || new Date().getTime();
     this.updatedAt = obj.updatedAt;
   }
@@ -66,6 +67,7 @@ class User {
      nationalId: this.nationalId,
      birthday: this.birthday,
 		 nationality: this.nationality,
+		 healthInfo: this.healthInfo,
      createdAt: this.createdAt,
      updatedAt: this.updatedAt
     };
@@ -144,33 +146,6 @@ class User {
   }
 
   async update() {
-    const updateItem = this.toModel();
-    const params = {
-      TableName: tableName,
-      Key: {
-        id: this.id,
-      },
-      ExpressionAttributeValues: {
-      },
-      ExpressionAttributeNames: {
-      },
-      ReturnValues: 'ALL_NEW',
-    };
-    
-    updateItem.updatedAt = new Date().getTime();
-    _.forEach(updateItem, (item, key) => {
-      if (!['id', 'email', 'password', 'type', 'method', 'createdAt'].includes(key)) {
-        const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
-        params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
-        params.ExpressionAttributeNames['#' + key] = key;
-        params.ExpressionAttributeValues[':' + key] = item;
-      }
-    });
-    const response = await dynamoDbLib.call('update', params);
-    return response;
-	}
-	
-	async update() {
     const updateItem = this.toModel();
     const params = {
       TableName: tableName,
@@ -427,7 +402,7 @@ class User {
     
     updateItem.updatedAt = new Date().getTime();
     _.forEach(updateItem, (item, key) => {
-      if (['first_name', 'last_name', 'phone', 'nationality', 'birthday', 'updatedAt'].includes(key)) {
+      if (['first_name', 'last_name', 'phone', 'nationality', 'birthday', 'updatedAt', 'healthInfo'].includes(key)) {
         const beginningParam = params.UpdateExpression ? `${params.UpdateExpression}, ` : 'SET ';
         params.UpdateExpression = beginningParam + '#' + key + ' = :' + key;
         params.ExpressionAttributeNames['#' + key] = key;

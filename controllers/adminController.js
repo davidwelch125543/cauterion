@@ -4,6 +4,7 @@ const { Test } = require('../models/test.model');
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
 const { PackageQR } = require('../models/packageQr.model');
+const uuid = require('uuid').v4;
 
 const adminLogin = async (req, res) => {
   try {
@@ -29,6 +30,27 @@ const updateUserData = async (req, res) => {
 		if (userUpdate && userUpdate.userId) {
 			const user = (await User.getUserById(userUpdate.userId)).Items[0];
 			if (![USER_TYPES.MEMBER, USER_TYPES.USER].includes(user.type)) throw new Error('Access denied, can\'t update operators');
+			
+			// # Health info with upsert
+			if (userUpdate.healthInfo) { 
+				const newHealthInfo = false;
+				if (!userUpdate.healthInfo.id) {
+					// Creating
+					newHealthInfo = true;
+					userUpdate.healthInfo.id = uuid();
+					userUpdate.healthInfo.fields.forEach(f => f.id = uuid());
+					(user.healthInfo || []).push(userUpdate.healthInfo);
+					userUpdate.healthInfo = user.healthInfo;
+				} else {
+					// Updating
+					const foundHealthInfoInd = user.healthInfo.findIndex(f => f.id.toString() === userUpdate.healthInfo.id.toString());
+					if (!foundHealthInfoInd) throw new Error('Invalid health info element');
+					
+					userUpdate.healthInfo.fields.forEach(f => { if (!f.id) f.id = uuid(); });
+					user.healthInfo[foundHealthInfoInd] = userUpdate.healthInfo;
+					userUpdate.healthInfo = user.healthInfo;
+				}
+			}
 		  await User.updateByOperator(userUpdate);
 		}
 
@@ -36,7 +58,6 @@ const updateUserData = async (req, res) => {
 			const currentTest = (await Test.getTestById(testUpdate.testId)).Items[0];
 			await Test.updateResultByOperator(currentTest, testUpdate.result);
 		}
-
 		res.status(200).send('Success');
 	} catch (error) {
 		console.log('Failed to update user data', error);
