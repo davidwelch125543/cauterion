@@ -33,7 +33,7 @@ const updateUserData = async (req, res) => {
 			
 			// # Health info with upsert
 			if (userUpdate.healthInfo) { 
-				const newHealthInfo = false;
+				let newHealthInfo = false;
 				if (!userUpdate.healthInfo.id) {
 					// Creating
 					newHealthInfo = true;
