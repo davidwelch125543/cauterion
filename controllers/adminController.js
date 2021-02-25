@@ -39,7 +39,8 @@ const updateUserData = async (req, res) => {
 					newHealthInfo = true;
 					userUpdate.healthInfo.id = uuid();
 					userUpdate.healthInfo.fields.forEach(f => f.id = uuid());
-					(user.healthInfo || []).push(userUpdate.healthInfo);
+					user.healthInfo = user.healthInfo || [];
+					user.healthInfo.push(userUpdate.healthInfo);
 					userUpdate.healthInfo = user.healthInfo;
 				} else {
 					// Updating
