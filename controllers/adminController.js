@@ -143,8 +143,41 @@ const updateSupportTicket = async (req, res) => {
 const getUsersList = async (req, res) => {
   try {
     const data = req.body;
-    const usersList = await User.getUsersListForAdmin(data);
-    res.status(200).send(usersList);
+    const usersList = (await User.getUsersListForAdmin(data));
+
+		const initializedUserList = [];
+
+		for (const exUser of (usersList.Items || [])) {
+			delete exUser.password;
+			delete exUser.code;
+			delete exUser.resetPasswordCode;
+
+			let tests = (await Test.getTestsByUserId(exUser.id)) || [];
+			for (let i = 0; i < tests.length; i++) {
+				if (tests[i].result && tests[i].type) {
+					tests[i].result = (await PackageQR.getByCode(tests[i].type, tests[i].result)).result;
+				}
+			}
+
+			const members = (await User.retrieveMembers(exUser.id)).Items;
+			
+			await Promise.all(members.map(async (mem, memInd) => {
+				let memberTests = await Test.getTestsByUserId(mem.id);
+				await Promise.all(memberTests.map(async (t, i) => {
+					const resData = await PackageQR.getByCode(t.type, t.result);
+					memberTests[i].result = resData;
+				}));
+				members[memInd].tests = memberTests;
+			}));
+
+			initializedUserList.push({
+				...exUser,
+				tests,
+				members
+			});
+		}
+		if (usersList.LastEvaluatedKey) initializedUserList.push({ LastEvaluatedKey: usersList.LastEvaluatedKey, Count: usersList.Count });
+    res.status(200).send(initializedUserList);
   } catch (error) {
     console.log('Get users list failed', error);
     res.status(409).send(error);
