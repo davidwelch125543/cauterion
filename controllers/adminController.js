@@ -22,10 +22,11 @@ const adminLogin = async (req, res) => {
 
 const updateUserData = async (req, res) => {
 	try {
-		const operator = req.user;
+		const adminRole = req.user;
 		const { userUpdate, testUpdate } = req.body;
-		if (!operator.operatorWrAccess) throw new Error('Operator has not write access to modify user data');
-
+		if (![USER_TYPES.ADMIN, USER_TYPES.OPERATOR].includes(adminRole.type) || (adminRole.type === USER_TYPES.OPERATOR && !adminRole.operatorWrAccess)) {
+			throw new Error('Operator has not write access to modify user data');
+		}
 		// Update user info by operator
 		if (userUpdate && userUpdate.userId) {
 			const user = (await User.getUserById(userUpdate.userId)).Items[0];
